@@ -1,0 +1,28 @@
+{
+  "template": "https://github.com/FAIRmat-NFDI/cookiecutter-nomad-plugin",
+  "commit": "3c5b9b8bfb4c6e91c3f84aa6e5e453f2b721a326",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "full_name": "Sathya Sai Seetharaman",
+      "email": "sathya-sai.seetharaman@stfc.ac.uk",
+      "github_username": "CCP-NC",
+      "plugin_name": "nomad-oasis-schema-parser-plugin",
+      "module_name": "nomad_oasis_schema_parser_plugin",
+      "short_description": "Specialised magres parser + custom schema package for the CCP-NC NOMAD Oasis.",
+      "version": "0.1.0",
+      "license": "MIT",
+      "include_schema_package": true,
+      "include_normalizer": false,
+      "include_parser": true,
+      "include_app": false,
+      "include_example_uploads": false,
+      "_copy_without_render": [
+        "*.html"
+      ],
+      "_template": "https://github.com/FAIRmat-NFDI/cookiecutter-nomad-plugin",
+      "_commit": "3c5b9b8bfb4c6e91c3f84aa6e5e453f2b721a326"
+    }
+  },
+  "directory": null
+}
