@@ -2,17 +2,19 @@ from nomad.config.models.plugins import ParserEntryPoint
 from pydantic import Field
 
 
-class NewParserEntryPoint(ParserEntryPoint):
+class CCPNCParserEntryPoint(ParserEntryPoint):
     parameter: int = Field(0, description='Custom configuration parameter')
 
     def load(self):
-        from nomad_oasis_schema_parser_plugin.parsers.parser import NewParser
+        from nomad_oasis_schema_parser_plugin.parsers.parser import CCPNCMagresParser
 
-        return NewParser(**self.model_dump())
+        return CCPNCMagresParser(**self.dict())
 
 
-parser_entry_point = NewParserEntryPoint(
-    name='NewParser',
-    description='New parser entry point configuration.',
-    mainfile_name_re=r'.*\.newmainfilename',
+ccpnc_parser_entry_point = CCPNCParserEntryPoint(
+    name='CCPNCParserEntryPoint',
+    description='CCPNC parser entry point configuration.',
+    level=1,
+    parser_as_interface=False,  # in order to use `child_archives` and auto workflows
+    mainfile_name_re=r'.*\.magres',
 )
