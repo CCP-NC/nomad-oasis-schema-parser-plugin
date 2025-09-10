@@ -78,13 +78,17 @@ class CCPNCMagresParser(MagresParser):
         self.magres_outputs_class = NMROutputs
 
     def test_file_discovery(self, logger: "BoundLogger") -> None:
-        """Test method to check file discovery"""
+        """Test method to check file discovery with exact filename matching"""
         logger.info(f"Testing file discovery for mainfile: {self.mainfile}")
         logger.info(f"Maindir: {self.maindir}")
         logger.info(f"Basename: {self.basename}")
         
         # List all files in the directory
         import os
+        # Extract the base filename without extension
+        base_filename = os.path.splitext(self.basename)[0]
+        logger.info(f"Base filename (without extension): {base_filename}")
+
         try:
             files_in_dir = os.listdir(self.maindir)
             logger.info(f"Files in directory: {files_in_dir}")
@@ -92,17 +96,42 @@ class CCPNCMagresParser(MagresParser):
             # Check for JSON files specifically
             json_files = [f for f in files_in_dir if f.endswith('.json')]
             logger.info(f"JSON files found: {json_files}")
+
+            # Check for magres files specifically
+            magres_files = [f for f in files_in_dir if f.endswith('.magres')]
+            logger.info(f"Magres files found: {magres_files}")
+
+            # Test exact filename matching for the corresponding JSON file
+            expected_json_filename = f"{base_filename}.json"
+            expected_json_path = os.path.join(self.maindir, expected_json_filename)
+
+            if os.path.exists(expected_json_path):
+                logger.info(f"Found exact matching JSON file: {expected_json_filename}")
+            else:
+                logger.warning(f"No matching JSON file found for: {expected_json_filename}")
             
-            # Test the get_files function
-            found_files = get_files(
-                pattern="*.json", filepath=self.mainfile, stripname=self.basename
+            # Test the get_files function with exact pattern
+            found_exact_json = get_files(
+                pattern=expected_json_filename, 
+                filepath=self.mainfile, 
+                stripname=self.basename
             )
-            logger.info(f"get_files result for *.json: {found_files}")
+            logger.info(f"get_files result for exact match '{expected_json_filename}': {found_exact_json}")
             
+            # Test the old generic pattern for comparison
+            found_generic_json = get_files(
+                pattern="*.json", 
+                filepath=self.mainfile, 
+                stripname=self.basename
+            )
+            logger.info(f"get_files result for generic '*.json': {found_generic_json}")
+        
             found_mrd_files = get_files(
-                pattern="MRD*.json", filepath=self.mainfile, stripname=self.basename
+                pattern="MRD*.json", 
+                filepath=self.mainfile, 
+                stripname=self.basename
             )
-            logger.info(f"get_files result for MRD*.json: {found_mrd_files}")
+            logger.info(f"get_files result for 'MRD*.json': {found_mrd_files}")
             
         except Exception as e:
             logger.error(f"Error during file discovery test: {e}")
@@ -110,16 +139,29 @@ class CCPNCMagresParser(MagresParser):
     def parse_json_file(
         self, filepath: str, logger: "BoundLogger"
     ) -> CCPNCMetadata | None:
-        """Parse the JSON file and extract relevant information."""
+        """Parse the JSON file and extract relevant information with exact filename matching."""
+        # Extract the base filename without extension
+        base_filename = os.path.splitext(self.basename)[0]
+        expected_json_filename = f"{base_filename}.json"
+    
         logger.info(
-            f"Looking for JSON files with pattern 'MRD*.json' near mainfile: "
-            f"{filepath}"
+            f"Looking for exact matching JSON file '{expected_json_filename}' "
+            f"for magres file: {filepath}"
         )
+    
+        # First try exact filename matching
         magres_json_file = get_files(
-            pattern="MRD*.json", filepath=filepath, stripname=self.basename
+            pattern=expected_json_filename, 
+            filepath=filepath, 
+            stripname=self.basename
         )
+
         if not magres_json_file:
             logger.warning("No JSON file found.")
+            logger.warning(
+                "If you have added json file, please name it the same as its magres "
+                "file."
+            )
             return None
         
         json_file_path = magres_json_file[0]
