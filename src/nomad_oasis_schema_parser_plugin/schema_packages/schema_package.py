@@ -64,6 +64,14 @@ class MaterialProperties(ArchiveSection):
         """,
     )
 
+class PublicationRecord(ArchiveSection):
+    doi = Quantity(
+        type=str,
+        description="""
+        Digital Object Identifier if results are part of a publication.
+        """,
+    )
+
 
 class ORCID(ArchiveSection):
     orcid_id = Quantity(
@@ -88,6 +96,13 @@ class CCPNCRecord(ArchiveSection):
         type=str,
         description="""
         7 digit unique record identifier.
+        """,
+    )
+
+    license = Quantity(
+        type=str,
+        description="""
+        License under which the record is released.
         """,
     )
 
@@ -131,6 +146,7 @@ class CCPNCMetadata(ArchiveSection):
     ccpnc_record = SubSection(section_def=CCPNCRecord)
     external_database_reference = SubSection(section_def=ExternalDatabaseReference)
     free_text_metadata = SubSection(section_def=FreeTextMetadata)
+    publication_record = SubSection(section_def=PublicationRecord)
 
 
 # Define the CCPNCSimulation class holding CCP-NC specific metadata
