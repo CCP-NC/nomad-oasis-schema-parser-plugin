@@ -45,6 +45,7 @@ from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
     ExternalDatabaseReference,
     FreeTextMetadata,
     MaterialProperties,
+    PublicationRecord,
 )
 from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
     CCPNCSimulation as Simulation,
@@ -183,6 +184,7 @@ class CCPNCMagresParser(MagresParser):
         ccpnc_record = CCPNCRecord()
         external_database_reference = ExternalDatabaseReference()
         free_text_metadata = FreeTextMetadata()
+        publication_record = PublicationRecord()
 
         # Parse material properties
         material_properties.chemical_name = magres_json_data.get("chemname", "")
@@ -203,6 +205,7 @@ class CCPNCMagresParser(MagresParser):
 
         # Parse version metadata
         version_metadata = magres_json_data.get("version_metadata", {})
+        ccpnc_record.license = version_metadata.get("license", "")
         external_database_reference.external_database_name = version_metadata.get(
             "extref_type", ""
             )
@@ -214,12 +217,16 @@ class CCPNCMagresParser(MagresParser):
             "chemform", ""
             )
 
+        # Parse publication record
+        publication_record.doi = version_metadata.get("doi", "")
+
         # Assemble the metadata
         ccpnc_metadata.material_properties = material_properties
         ccpnc_metadata.orcid = orcid
         ccpnc_metadata.ccpnc_record = ccpnc_record
         ccpnc_metadata.external_database_reference = external_database_reference
         ccpnc_metadata.free_text_metadata = free_text_metadata
+        ccpnc_metadata.publication_record = publication_record
 
         logger.info("Successfully created CCPNCMetadata object")
         return ccpnc_metadata
