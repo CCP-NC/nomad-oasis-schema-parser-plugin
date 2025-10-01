@@ -81,7 +81,8 @@ class CCPNCMagresParser(MagresParser):
     def parse_json_file(
         self, filepath: str, logger: "BoundLogger"
     ) -> CCPNCMetadata | None:
-        """Parse the JSON file and extract relevant information with exact filename matching."""
+        """Parse the JSON file and extract relevant information with exact 
+        filename matching."""
         # Extract the base filename without extension
         base_filename = os.path.splitext(self.basename)[0]
         expected_json_filename = f"{base_filename}.json"
@@ -182,195 +183,160 @@ class CCPNCMagresParser(MagresParser):
         shielding.
         This method combines the original magres parsing with the NMR schema.
         """
-        logger.info("Starting to parse NMR outputs with magnetic shielding")
-        
-        # Initial check on simulation.model_system
-        if simulation.model_system is None or len(simulation.model_system) == 0:
-            logger.warning(
-                'Could not find the ModelSystem that the outputs reference to.'
-            )
+        # Initial validation
+        if not self._validate_simulation_data(simulation, logger):
             return None
-            
+        
+        # Get validated data
         model_system = simulation.model_system[-1]
-        if not model_system.cell or len(model_system.cell) == 0:
-            logger.warning('Could not find the cell sub-section.')
-            return None
-            
-        if (
-            not hasattr(model_system, 'particle_states') 
-            or not model_system.particle_states
-        ):
-            logger.warning('Could not find the particle_states list.')
-            return None
-
-        # Create outputs object with references
-        outputs = NMROutputs(
-            model_method_ref=(
-            simulation.model_method[-1] if simulation.model_method else None
-            ),
-            model_system_ref=model_system,
-        )
-        
-        # Check if [magres][/magres] was correctly parsed
         magres_data = self.magres_file_parser.get('magres')
         if not magres_data:
             logger.warning('Could not find [magres] data block in magres file.')
             return None
 
-        logger.info("Found magres data block, proceeding to parse ALL NMR quantities")
+        # Create outputs object with references
+        outputs = NMROutputs(
+            model_method_ref=(
+                simulation.model_method[-1] if simulation.model_method else None
+            ),
+            model_system_ref=model_system,
+        )
+        
+        # Parse all NMR quantities
+        self._parse_all_nmr_quantities(outputs, magres_data, model_system, logger)
+        
+        return outputs
 
+    def _validate_simulation_data(
+        self, 
+        simulation: Simulation, 
+        logger: "BoundLogger"
+    ) -> bool:
+        """Validate that simulation has the required model_system data."""
+        if simulation.model_system is None or len(simulation.model_system) == 0:
+            logger.warning(
+                'Could not find the ModelSystem that the outputs reference to.'
+            )
+            return False
+        return True
+
+    def _parse_all_nmr_quantities(
+        self,
+        outputs: NMROutputs,
+        magres_data: dict,
+        model_system,
+        logger: "BoundLogger",
+    ) -> None:
+        """Parse all NMR quantities and assign them to outputs."""
         cell = model_system.cell[-1]
         atom_state_class = AtomsState
+
+        # Create parser context
+        parser_context = {
+            'magres_data': magres_data,
+            'cell': cell,
+            'atom_state_class': atom_state_class,
+            'model_system': model_system,
+            'logger': logger,
+        }
         
-        # Parse magnetic shieldings
-        logger.info("Parsing magnetic shieldings...")
-        ms = self.parse_magnetic_shieldings(
-            magres_data=magres_data,
-            cell=cell,
-            atom_state_class=atom_state_class,
-            model_system=model_system,
-            logger=logger,
-        )
-        if len(ms) > 0:
-            outputs.magnetic_shieldings = ms
-            logger.info(f"Successfully parsed {len(ms)} magnetic shielding tensors")
-        else:
-            logger.info("No magnetic shielding data found")
+        # Define parsing configurations
+        nmr_parsers = [
+            {
+                'method': 'parse_magnetic_shieldings',
+                'output_attr': 'magnetic_shieldings',
+                'log_name': 'magnetic shielding',
+                'requires_filtering': False,
+            },
+            {
+                'method': 'parse_electric_field_gradients',
+                'output_attr': 'electric_field_gradients',
+                'log_name': 'electric field gradient',
+                'requires_filtering': False,
+            },
+            {
+                'method': 'parse_indirect_spin_spin_couplings',
+                'output_attr': 'indirect_spin_spin_couplings',
+                'log_name': 'total indirect spin-spin coupling',
+                'requires_filtering': True,
+            },
+            {
+                'method': 'parse_indirect_spin_spin_couplings_fc',
+                'output_attr': 'indirect_spin_spin_couplings_fermi_contact',
+                'log_name': 'Fermi contact coupling',
+                'requires_filtering': True,
+            },
+            {
+                'method': 'parse_indirect_spin_spin_couplings_orbital_d',
+                'output_attr': 'indirect_spin_spin_couplings_orbital_d',
+                'log_name': 'orbital diamagnetic coupling',
+                'requires_filtering': True,
+            },
+            {
+                'method': 'parse_indirect_spin_spin_couplings_orbital_p',
+                'output_attr': 'indirect_spin_spin_couplings_orbital_p',
+                'log_name': 'orbital paramagnetic coupling',
+                'requires_filtering': True,
+            },
+            {
+                'method': 'parse_indirect_spin_spin_couplings_spin',
+                'output_attr': 'indirect_spin_spin_couplings_spin_dipolar',
+                'log_name': 'spin dipolar coupling',
+                'requires_filtering': True,
+            },
+        ]
+        
+        # Parse standard NMR quantities
+        for parser_config in nmr_parsers:
+            self._parse_single_nmr_quantity(outputs, parser_context, parser_config)
+        
+        # Parse magnetic susceptibilities (different signature)
+        self._parse_magnetic_susceptibilities(outputs, magres_data, logger)
 
-        # Parse electric field gradients
-        logger.info("Parsing electric field gradients...")
-        efg = self.parse_electric_field_gradients(
-            magres_data=magres_data,
-            cell=cell,
-            atom_state_class=atom_state_class,
-            model_system=model_system,
-            logger=logger,
+    def _parse_single_nmr_quantity(
+        self,
+        outputs: NMROutputs,
+        parser_context: dict,
+        config: dict,
+    ) -> None:
+        """Parse a single NMR quantity based on configuration."""
+        method = getattr(self, config['method'])
+        
+        # Call the parser method
+        results = method(
+            magres_data=parser_context['magres_data'],
+            cell=parser_context['cell'],
+            atom_state_class=parser_context['atom_state_class'],
+            model_system=parser_context['model_system'],
+            logger=parser_context['logger'],
         )
-        if len(efg) > 0:
-            outputs.electric_field_gradients = efg
-            logger.info(
-                f"Successfully parsed {len(efg)} electric field gradient tensors"
-            )
+        
+        # Filter results if needed
+        if config['requires_filtering'] and results:
+            results = [item for item in results if item is not None]
+        
+        # Assign results to outputs
+        if results and len(results) > 0:
+            setattr(outputs, config['output_attr'], results)
         else:
-            logger.info("No electric field gradient data found")
+            parser_context['logger'].info(f"No {config['log_name']} data found")
 
-        # Parse indirect spin-spin couplings (total)
-        logger.info("Parsing indirect spin-spin couplings (total)...")
-        isc = self.parse_indirect_spin_spin_couplings(
-            magres_data=magres_data,
-            cell=cell,
-            atom_state_class=atom_state_class,
-            model_system=model_system,
-            logger=logger,
-        )
-        if len(isc) > 0:
-            # Filter out None values that might exist from the original parser
-            isc_filtered = [coupling for coupling in isc if coupling is not None]
-            outputs.indirect_spin_spin_couplings = isc_filtered
-            logger.info(
-                f"Successfully parsed {len(isc_filtered)} total indirect spin-spin "
-                f"couplings"
-            )
-        else:
-            logger.info("No total indirect spin-spin coupling data found")
-
-        # Parse Fermi contact contribution
-        logger.info("Parsing Fermi contact spin-spin couplings...")
-        isc_fc = self.parse_indirect_spin_spin_couplings_fc(
-            magres_data=magres_data,
-            cell=cell,
-            atom_state_class=atom_state_class,
-            model_system=model_system,
-            logger=logger,
-        )
-        if len(isc_fc) > 0:
-            isc_fc_filtered = [coupling for coupling in isc_fc if coupling is not None]
-            outputs.indirect_spin_spin_couplings_fermi_contact = isc_fc_filtered
-            logger.info(
-                f"Successfully parsed {len(isc_fc_filtered)} Fermi contact couplings"
-            )
-        else:
-            logger.info("No Fermi contact coupling data found")
-
-        # Parse orbital diamagnetic contribution
-        logger.info("Parsing orbital diamagnetic spin-spin couplings...")
-        isc_orbital_d = self.parse_indirect_spin_spin_couplings_orbital_d(
-            magres_data=magres_data,
-            cell=cell,
-            atom_state_class=atom_state_class,
-            model_system=model_system,
-            logger=logger,
-        )
-        if len(isc_orbital_d) > 0:
-            isc_orbital_d_filtered = [
-                coupling for coupling in isc_orbital_d if coupling is not None
-            ]
-            outputs.indirect_spin_spin_couplings_orbital_d = isc_orbital_d_filtered
-            logger.info(
-                f"Successfully parsed {len(isc_orbital_d_filtered)} orbital "
-                f"diamagnetic couplings"
-            )
-        else:
-            logger.info("No orbital diamagnetic coupling data found")
-
-        # Parse orbital paramagnetic contribution
-        logger.info("Parsing orbital paramagnetic spin-spin couplings...")
-        isc_orbital_p = self.parse_indirect_spin_spin_couplings_orbital_p(
-            magres_data=magres_data,
-            cell=cell,
-            atom_state_class=atom_state_class,
-            model_system=model_system,
-            logger=logger,
-        )
-        if len(isc_orbital_p) > 0:
-            isc_orbital_p_filtered = [
-                coupling for coupling in isc_orbital_p if coupling is not None
-            ]
-            outputs.indirect_spin_spin_couplings_orbital_p = isc_orbital_p_filtered
-            logger.info(
-                f"Successfully parsed {len(isc_orbital_p_filtered)} orbital "
-                f"paramagnetic couplings"
-            )
-        else:
-            logger.info("No orbital paramagnetic coupling data found")
-
-        # Parse spin dipolar contribution
-        logger.info("Parsing spin dipolar spin-spin couplings...")
-        isc_spin = self.parse_indirect_spin_spin_couplings_spin(
-            magres_data=magres_data,
-            cell=cell,
-            atom_state_class=atom_state_class,
-            model_system=model_system,
-            logger=logger,
-        )
-        if len(isc_spin) > 0:
-            isc_spin_filtered = [
-                coupling for coupling in isc_spin if coupling is not None
-            ]
-            outputs.indirect_spin_spin_couplings_spin_dipolar = isc_spin_filtered
-            logger.info(
-                f"Successfully parsed {len(isc_spin_filtered)} spin dipolar couplings"
-            )
-        else:
-            logger.info("No spin dipolar coupling data found")
-
-        # Parse magnetic susceptibilities
-        logger.info("Parsing magnetic susceptibilities...")
+    def _parse_magnetic_susceptibilities(
+        self,
+        outputs: NMROutputs,
+        magres_data: dict,
+        logger: "BoundLogger",
+    ) -> None:
+        """Parse magnetic susceptibilities (different method signature)."""
         mag_sus = self.parse_magnetic_susceptibilities(
             magres_data=magres_data, 
             logger=logger
         )
+        
         if len(mag_sus) > 0:
             outputs.magnetic_susceptibilities = mag_sus
-            logger.info(
-                f"Successfully parsed {len(mag_sus)} magnetic susceptibility tensors"
-            )
         else:
             logger.info("No magnetic susceptibility data found")
-
-        logger.info("Completed parsing all available NMR quantities")
-
-        return outputs
 
     def parse(
         self,
@@ -383,10 +349,7 @@ class CCPNCMagresParser(MagresParser):
         self.maindir = os.path.dirname(self.mainfile)
         self.basename = os.path.basename(self.mainfile)
         self.archive = archive
-        
-        logger.info(f'CCPNCMagresParser.parse starting for file: {filepath}')
-        logger.info(f'Configuration parameter: {configuration.parameter}')
-
+  
         # Initialize the magres file parser (from parent class)
         self.init_parser(logger=logger)
         self._check_units_magres(logger=logger)
@@ -396,8 +359,6 @@ class CCPNCMagresParser(MagresParser):
 
         # Adding Simulation to data
         simulation = Simulation()
-        logger.info("Created Simulation object")
-        # archive.data = simulation
 
         # Parse magres file structure and calculation parameters (from parent class)
         calculation_params = self.magres_file_parser.get('calculation', {})
@@ -411,9 +372,6 @@ class CCPNCMagresParser(MagresParser):
             name=calculation_params.get('code', 'Unknown'),
             version=calculation_params.get('code_version', ''),
         )
-        logger.info(
-            f"Set program: {simulation.program.name} v{simulation.program.version}"
-            )
 
         # Parse model system (from parent class)
         model_system = self.parse_model_system(logger=logger)
@@ -438,58 +396,6 @@ class CCPNCMagresParser(MagresParser):
         )
         if outputs is not None:
             simulation.outputs.append(outputs)
-            logger.info("Successfully parsed NMR outputs")
-
-            # Log summary of parsed quantities
-            summary = []
-            if hasattr(outputs, 'magnetic_shieldings') and outputs.magnetic_shieldings:
-                summary.append(
-                    f"{len(outputs.magnetic_shieldings)} magnetic shieldings"
-                )
-            if hasattr(outputs, 'electric_field_gradients') and \
-                    outputs.electric_field_gradients:
-                summary.append(
-                    f"{len(outputs.electric_field_gradients)} electric field gradients"
-                )
-            if hasattr(outputs, 'indirect_spin_spin_couplings') and \
-                    outputs.indirect_spin_spin_couplings:
-                summary.append(
-                    f"{len(outputs.indirect_spin_spin_couplings)} total spin-spin "
-                    "couplings"
-                )
-            if hasattr(outputs, 'indirect_spin_spin_couplings_fermi_contact') and \
-                    outputs.indirect_spin_spin_couplings_fermi_contact:
-                summary.append(
-                    f"{len(outputs.indirect_spin_spin_couplings_fermi_contact)} Fermi "
-                    "contact couplings"
-                )
-            if hasattr(outputs, 'indirect_spin_spin_couplings_orbital_d') and \
-                    outputs.indirect_spin_spin_couplings_orbital_d:
-                summary.append(
-                    f"{len(outputs.indirect_spin_spin_couplings_orbital_d)} orbital "
-                    "diamagnetic couplings"
-                )
-            if hasattr(outputs, 'indirect_spin_spin_couplings_orbital_p') and \
-                    outputs.indirect_spin_spin_couplings_orbital_p:
-                summary.append(
-                    f"{len(outputs.indirect_spin_spin_couplings_orbital_p)} orbital "
-                    "paramagnetic couplings"
-                )
-            if hasattr(outputs, 'indirect_spin_spin_couplings_spin_dipolar') and \
-                    outputs.indirect_spin_spin_couplings_spin_dipolar:
-                summary.append(
-                    f"{len(outputs.indirect_spin_spin_couplings_spin_dipolar)} spin "
-                    "dipolar couplings"
-                )
-            if hasattr(outputs, 'magnetic_susceptibilities') and \
-                    outputs.magnetic_susceptibilities:
-                summary.append(
-                    f"{len(outputs.magnetic_susceptibilities)} "
-                    "magnetic susceptibilities"
-                )
-            
-            if summary:
-                logger.info(f"Parsed NMR quantities summary: {', '.join(summary)}")
         else:
             logger.warning("Could not parse NMR outputs")
 
