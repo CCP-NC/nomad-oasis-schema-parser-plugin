@@ -117,7 +117,7 @@ where = ["src"]
 [project.entry-points.'nomad.plugin']
 ccpnc_parser_entry_point = "nomad_oasis_schema_parser_plugin.parsers:ccpnc_parser_entry_point"
 ccpnc_schema_package_entry_point = "nomad_oasis_schema_parser_plugin.schema_packages:ccpnc_schema_entry_point"
-
+ccpnc_normalizer_entry_point = "nomad_oasis_schema_parser_plugin.normalizers:ccpnc_normalizer_entry_point"
 
 
 [tool.cruft]
