@@ -366,7 +366,10 @@ class CCPNCMagresParser(MagresParser):
             logger.warning(
                 'Non-CASTEP NMR simulations may not be fully supported.'
             )
-        
+        # Add XC functional mappings to calculation_params for the normalizer
+        calculation_params['_xc_functional_type_map'] = self._xc_functional_type_map
+        calculation_params['_xc_functional_map'] = self._xc_functional_map
+
         # Set program information
         simulation.program = Program(
             name=calculation_params.get('code', 'Unknown'),
@@ -377,17 +380,47 @@ class CCPNCMagresParser(MagresParser):
         model_system = self.parse_model_system(logger=logger)
         if model_system is not None:
             simulation.model_system.append(model_system)
-            logger.info(
-                f"Successfully parsed model system with "
-                f"{len(model_system.particle_states)} atoms"
-            )
+
+            # Extract unique chemical symbols from particle_states
+            unique_elements = list(set(
+                ps.chemical_symbol for ps in model_system.particle_states 
+                if ps.chemical_symbol
+            ))
+            # Create a sample class to populate results using normalizer
+            class CCPNCSample:
+                def __init__(self, elements):
+                    self.elements = elements
+                    self.chemical_formula = None
+                    self.name = None
+
+            # Create ccpnc sample object with extracted elements
+            ccpnc_sample = CCPNCSample(unique_elements)
+
+            # Store sample data for normalizer
+            archive._ccpnc_sample = ccpnc_sample
         else:
             logger.warning("Could not parse model system from magres file")
 
         # Parse model method (from parent class)
         model_method = self.parse_model_method(calculation_params=calculation_params)
         simulation.model_method.append(model_method)
-        logger.info("Successfully parsed model method")
+
+        # Create a measurement class to populate results using normalizer
+        class CCPNCMeasurement:
+            def __init__(self):
+                self.method_abbreviation = 'NMR'
+                self.sample = []
+
+            def m_xpath(self, path):
+                """Mock m_xpath method that returns None for any path"""
+                return None
+
+        # Create ccpnc measurement object
+        ccpnc_measurement = CCPNCMeasurement()
+
+        # Store measurement data and calculation params for normalizer
+        archive._ccpnc_measurement = ccpnc_measurement
+        archive._ccpnc_calculation_params = calculation_params
 
         # Parse NMR outputs with magnetic shielding
         outputs = self.parse_outputs_with_nmr_schema(
