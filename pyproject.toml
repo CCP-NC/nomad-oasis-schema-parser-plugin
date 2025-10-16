@@ -29,7 +29,8 @@ dependencies = [
     "python-magic-bin; sys_platform == 'win32'",
     "nomad-parser-plugins-electronic>=1.0",
     "nomad-schema-plugin-run>=1.0.1",
-    "nomad-parser-magres @ git+https://github.com/FAIRmat-NFDI/nomad-parser-magres.git@217c2e0fd5cd9eeedfc038bd02552c716b008d41",
+    "nomad-parser-plugins-atomistic>=1.0.6",
+    "nomad-parser-magres @ git+https://github.com/FAIRmat-NFDI/nomad-parser-magres.git@1c52a9d5b042e43dfb2500a6a7b889b9aec290c4",
     "nomad-nmr-schema @ git+https://github.com/FAIRmat-NFDI/nomad-schema-plugin-nmr.git@v0.1.1",
 ]
 
