@@ -7,9 +7,13 @@ if TYPE_CHECKING:
 
 import numpy as np
 from nomad.config import config
-from nomad.datamodel.data import ArchiveSection
+from nomad.datamodel.data import ArchiveSection, EntryData
 from nomad.metainfo import JSON, Quantity, SchemaPackage, SubSection
 from nomad_simulations.schema_packages.general import Simulation
+
+from nomad_oasis_schema_parser_plugin.schema_packages.metadata_voila import (
+    MetadataVoilaNotebook,
+)
 
 configuration = config.get_plugin_entry_point(
     'nomad_oasis_schema_parser_plugin.schema_packages:ccpnc_schema_entry_point'
@@ -138,6 +142,12 @@ class FreeTextMetadata(ArchiveSection):
         Additional notes specific to the polymorphic forms of the material.
         """,
     )
+
+class CCPNC_VoilaNotebook(MetadataVoilaNotebook, EntryData):
+    # m_def = Section(a_eln=dict(hide=['lab_id']))
+
+    def normalize(self, archive, logger):
+        super().normalize(archive, logger)
 
 
 class CCPNCMetadata(ArchiveSection):
