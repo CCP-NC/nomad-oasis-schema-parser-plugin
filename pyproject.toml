@@ -16,7 +16,7 @@ name = "nomad-oasis-schema-parser-plugin"
 description = "Specialised magres parser + custom schema package for the CCP-NC NOMAD Oasis."
 version = "0.1.0"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 authors = [
     { name = "Sathya Sai Seetharaman", email = "sathya-sai.seetharaman@stfc.ac.uk" },
 ]
@@ -30,7 +30,7 @@ dependencies = [
     "nomad-parser-plugins-electronic>=1.0",
     "nomad-schema-plugin-run>=1.0.1",
     "nomad-parser-plugins-atomistic>=1.0.6",
-    "nomad-parser-magres @ git+https://github.com/FAIRmat-NFDI/nomad-parser-magres.git@1c52a9d5b042e43dfb2500a6a7b889b9aec290c4",
+    "nomad-parser-magres @ git+https://github.com/FAIRmat-NFDI/nomad-parser-magres.git@3ae9bf5004701f4459bd5c5496de077901cfbbfb",
     "nomad-nmr-schema @ git+https://github.com/FAIRmat-NFDI/nomad-schema-plugin-nmr.git@v0.1.1",
 ]
 
