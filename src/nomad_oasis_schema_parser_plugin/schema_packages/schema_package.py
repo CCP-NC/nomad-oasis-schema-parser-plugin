@@ -7,9 +7,14 @@ if TYPE_CHECKING:
 
 import numpy as np
 from nomad.config import config
-from nomad.datamodel.data import ArchiveSection
-from nomad.metainfo import JSON, Quantity, SchemaPackage, SubSection
+from nomad.datamodel.data import ArchiveSection, EntryData
+from nomad.datamodel.metainfo.annotations import ELNAnnotation
+from nomad.metainfo import JSON, Quantity, Reference, SchemaPackage, SubSection
 from nomad_simulations.schema_packages.general import Simulation
+
+from nomad_oasis_schema_parser_plugin.schema_packages.eln_metadata import (
+    CCPNCMetadataELN,
+)
 
 configuration = config.get_plugin_entry_point(
     'nomad_oasis_schema_parser_plugin.schema_packages:ccpnc_schema_entry_point'
@@ -148,9 +153,28 @@ class CCPNCMetadata(ArchiveSection):
     free_text_metadata = SubSection(section_def=FreeTextMetadata)
     publication_record = SubSection(section_def=PublicationRecord)
 
+class RawFileMagresData(EntryData):
+    """
+    Section for a magres data file entry.
+    This links the raw magres file to its metadata ELN entry.
+    """
+    metadata_entry = Quantity(
+        type=Reference(CCPNCMetadataELN.m_def),
+        description='Reference to the metadata ELN entry',
+        a_eln=ELNAnnotation(
+            component='ReferenceEditQuantity',
+            label='Metadata Entry',
+        ),
+    )
 
 # Define the CCPNCSimulation class holding CCP-NC specific metadata
 class CCPNCSimulation(Simulation):
     ccpnc_metadata = SubSection(section_def=CCPNCMetadata)
+
+    # Add reference to the metadata ELN entry
+    metadata_eln_reference = Quantity(
+        type=Reference(CCPNCMetadataELN.m_def),
+        description='Reference to the external metadata ELN entry',
+    )
 
 m_package.__init_metainfo__()

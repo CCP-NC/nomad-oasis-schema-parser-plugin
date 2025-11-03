@@ -43,6 +43,9 @@ from nomad_oasis_schema_parser_plugin.parsers.utils.utils import (
     create_archive,
     get_files,
 )
+from nomad_oasis_schema_parser_plugin.schema_packages.eln_metadata import (
+    CCPNCMetadataELN,
+)
 from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
     ORCID,
     CCPNCMetadata,
@@ -51,6 +54,7 @@ from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
     FreeTextMetadata,
     MaterialProperties,
     PublicationRecord,
+    RawFileMagresData,
 )
 from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
     CCPNCSimulation as Simulation,
@@ -236,6 +240,67 @@ class CCPNCMagresParser(MagresParser):
         
         logger.info("Successfully created CCPNCMetadata object")
         return ccpnc_metadata
+
+    def create_metadata_eln(
+        self,
+        archive: 'EntryArchive',
+        logger: "BoundLogger",
+    ) -> None:
+        """
+        Create a separate metadata.archive.json ELN entry if no metadata files exist.
+        """
+        logger.warning("=== START: create_metadata_eln ===")
+
+        magres_dir = os.path.dirname(self.mainfile)
+        base_filename = os.path.splitext(self.basename)[0]
+        expected_json_filename = f"{base_filename}.json"
+        expected_json_path = os.path.join(magres_dir, expected_json_filename)
+
+        json_file_exists = os.path.isfile(expected_json_path)
+        csv_pattern = os.path.join(magres_dir, 'metadata_info.csv')
+        csv_file_exists = os.path.isfile(csv_pattern)
+        
+        if json_file_exists or csv_file_exists:
+            logger.warning("Metadata files found - skipping ELN creation")
+            return None
+
+        logger.warning("No metadata files found - creating metadata.archive.json ELN")
+
+        try:
+            from nomad_oasis_schema_parser_plugin.schema_packages.eln_metadata import (
+                ORCIDInputELN,
+            )
+            
+            # Create the ELN with initialized ORCID subsection
+            eln_entry = CCPNCMetadataELN()
+            eln_entry.orcid = ORCIDInputELN()
+            
+            logger.warning("✅ Created ELN entry with ORCID subsection")
+            
+        except Exception as e:
+            logger.warning(f"❌ FAILED: {e}")
+            import traceback
+            logger.warning(traceback.format_exc())
+            return None
+
+        file_name = 'metadata.archive.json'
+
+        try:
+            reference = create_archive(
+                entity=eln_entry,
+                archive=archive,
+                file_name=file_name,
+                overwrite=False,
+            )
+            logger.warning(f"✅ Successfully created {file_name}")
+            logger.warning("=== END: create_metadata_eln (success) ===")
+            return reference
+        except Exception as e:
+            logger.warning(f"❌ FAILED to create metadata ELN: {e}")
+            import traceback
+            logger.warning(traceback.format_exc())
+            return None
+
     def parse_json_file(
         self, filepath: str, logger: "BoundLogger"
     ) -> CCPNCMetadata | None:
@@ -637,5 +702,41 @@ class CCPNCMagresParser(MagresParser):
         else:
             logger.warning("No CCPNC metadata could be extracted")
 
+        # CREATE ELN ENTRY BEFORE SETTING archive.data
+        # This should happen only if no metadata sources were found
+        logger.warning("=== CHECKING IF ELN CREATION IS NEEDED ===")
+        logger.warning(f"Metadata source found: {metadata_source}")
+        
+        if metadata_source is None:
+            logger.warning("No metadata source found - attempting ELN creation")
+            logger.warning(f"archive type: {type(archive)}")
+            logger.warning(f"archive.metadata.upload_id: {getattr(archive.metadata, 'upload_id', 'NOT SET')}")
+            logger.warning(f"archive.m_context type: {type(archive.m_context)}")
+
+            # Create metadata ELN before setting archive.data
+            metadata_reference = self.create_metadata_eln(archive=archive, logger=logger)
+
+            logger.warning(f"create_metadata_eln returned: {metadata_reference}")
+
+            # Store the reference in the simulation
+            if metadata_reference:
+                logger.warning("Metadata reference exists - storing in simulation")
+                simulation.metadata_eln_reference = metadata_reference
+                logger.warning(f"Set simulation.metadata_eln_reference to: {metadata_reference}")
+            else:
+                logger.warning("No metadata reference returned - ELN creation failed or skipped")
+        else:
+            logger.warning(f"Metadata source '{metadata_source}' found - skipping ELN creation")
+
+        # NOW set archive.data after ELN creation attempt
+        logger.warning("=== SETTING archive.data ===")
+        # ccpnc_metadata = self.parse_json_file(filepath=self.mainfile, logger=logger)
+        # if ccpnc_metadata:
+        #     simulation.ccpnc_metadata = ccpnc_metadata
+        #     logger.info("Successfully assigned CCPNC metadata to simulation")
+        # else:
+        #     logger.warning("No CCPNC metadata could be extracted")
+
         archive.data = simulation
         logger.info("Successfully assigned simulation to archive.data")
+        logger.warning("=== PARSER END ===")
