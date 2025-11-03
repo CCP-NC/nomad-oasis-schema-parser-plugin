@@ -1,7 +1,9 @@
+import csv
 import json
 import os
 from typing import (
     TYPE_CHECKING,
+    Optional,
 )
 
 if TYPE_CHECKING:
@@ -37,7 +39,10 @@ from nomad_simulations.schema_packages.atoms_state import AtomsState
 from nomad_simulations.schema_packages.general import Program
 
 # utility function used to get auxiliary files next to the `mainfile`
-from nomad_oasis_schema_parser_plugin.parsers.utils.utils import get_files
+from nomad_oasis_schema_parser_plugin.parsers.utils.utils import (
+    create_archive,
+    get_files,
+)
 from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
     ORCID,
     CCPNCMetadata,
@@ -78,6 +83,159 @@ class CCPNCMagresParser(MagresParser):
         self.mag_susceptibility_class = MagneticSusceptibility
         self.magres_outputs_class = NMROutputs
 
+    def parse_csv_metadata(
+        self,
+        filepath: str,
+        target_filename: str,
+        logger: "BoundLogger"
+    ) -> dict | None:
+        """Parse CSV file to extract metadata for a specific magres file.
+    
+        Args:
+            filepath: Path to the magres file (used to locate CSV)
+            target_filename: The filename to look for in CSV (e.g., 'ethanol.magres')
+            logger: Logger instance
+        
+        Returns:
+            Dictionary with metadata matching JSON structure, or None if not found
+        """
+        # Look for CSV file
+        csv_files = get_files(
+            pattern='metadata_info.csv',
+            filepath=filepath,
+            stripname=self.basename,
+            deep=True
+        )
+
+        if not csv_files:
+            logger.info("No CSV metadata file found")
+            return None
+
+        csv_file_path = csv_files[0]
+
+        try:
+            with open(csv_file_path, 'r', encoding='utf-8') as f:
+                csv_reader = csv.DictReader(f)
+                
+                # Find the row matching magres filename
+                for row in csv_reader:
+                    if row.get('filename', '').strip() == target_filename:
+                        logger.info(f"Found metadata for {target_filename} in CSV")
+                        
+                        # Helper function to convert empty strings to None
+                        def clean_value(value):
+                            """Convert empty/whitespace strings to None"""
+                            if value is None:
+                                return None
+                            cleaned = value.strip()
+                            return None if cleaned == '' else cleaned
+                        
+                        # Construct metadata dict matching JSON structure
+                        metadata_dict = {
+                            'chemname': clean_value(row.get('chemname')),
+                            'type': 'magres',
+                            'version_metadata': {
+                                'license': clean_value(row.get('license')),
+                                'doi': clean_value(row.get('doi')),
+                                'extref_type': clean_value(row.get('extref_type')),
+                                'extref_code': clean_value(row.get('extref_code')),
+                                'extref_other': clean_value(row.get('extref_other')),
+                                'chemform': clean_value(row.get('chemform')),
+                                'notes': clean_value(row.get('notes')),
+                            }
+                        }
+                        
+                        return metadata_dict
+                
+                logger.warning(f"No entry found for {target_filename} in CSV file")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Failed to read or parse CSV file {csv_file_path}: {e}")
+            return None
+
+    def populate_metadata_from_dict(
+        self,
+        metadata_dict: dict,
+        calculation_params: dict,
+        logger: "BoundLogger"
+    ) -> CCPNCMetadata:
+        """Populate CCPNCMetadata from a dictionary (from JSON or CSV).
+        
+        Args:
+            metadata_dict: Dictionary containing metadata
+            calculation_params: Calculation parameters from magres file
+            logger: Logger instance
+            
+        Returns:
+            CCPNCMetadata object
+        """
+        def get_value_or_none(data, key, default=None):
+            """Get value from dict, converting empty strings to None"""
+            value = data.get(key, default)
+            if isinstance(value, str) and value.strip() == '':
+                return None
+            return value
+        
+        ccpnc_metadata = CCPNCMetadata()
+        material_properties = MaterialProperties()
+        orcid = ORCID()
+        ccpnc_record = CCPNCRecord()
+        external_database_reference = ExternalDatabaseReference()
+        free_text_metadata = FreeTextMetadata()
+        publication_record = PublicationRecord()
+        
+        # Parse material properties
+        material_properties.chemical_name = get_value_or_none(metadata_dict, "chemname")
+        material_properties.formula = get_value_or_none(metadata_dict, "formula")
+        material_properties.stoichiometry = get_value_or_none(metadata_dict, "stochiometry")
+        material_properties.elements_ratios = get_value_or_none(metadata_dict, "elements_ratios")
+
+        # Parse ORCID
+        orcid.orcid_id = get_value_or_none(metadata_dict, "ORCID")
+
+        # Parse CCPNC record
+        ccpnc_record.immutable_id = get_value_or_none(metadata_dict, "immutable_id")
+        
+        # Parse version metadata
+        version_metadata = metadata_dict.get("version_metadata", {})
+        ccpnc_record.license = get_value_or_none(version_metadata, "license")
+        external_database_reference.external_database_name = get_value_or_none(
+            version_metadata, "extref_type"
+        )
+        external_database_reference.external_database_reference_code = get_value_or_none(
+            version_metadata, "extref_code"
+        )
+        free_text_metadata.uploader_author_notes = get_value_or_none(
+            version_metadata, "notes"
+        )
+        free_text_metadata.structural_descriptor_notes = get_value_or_none(
+            version_metadata, "chemform"
+        )
+        
+        # Parse publication record
+        publication_record.doi = get_value_or_none(
+            version_metadata, "doi"
+        )
+        
+        # Add magres_calc from calculation_params if not in metadata_dict
+        if 'magres_calc' not in version_metadata and calculation_params:
+            version_metadata['magres_calc'] = {
+                'calc_code': calculation_params.get('code', ''),
+                'calc_code_version': calculation_params.get('code_version', ''),
+                'calc_xcfunctional': calculation_params.get('functional', ''),
+            }
+        
+        # Assemble the metadata
+        ccpnc_metadata.material_properties = material_properties
+        ccpnc_metadata.orcid = orcid
+        ccpnc_metadata.ccpnc_record = ccpnc_record
+        ccpnc_metadata.external_database_reference = external_database_reference
+        ccpnc_metadata.free_text_metadata = free_text_metadata
+        ccpnc_metadata.publication_record = publication_record
+        
+        logger.info("Successfully created CCPNCMetadata object")
+        return ccpnc_metadata
     def parse_json_file(
         self, filepath: str, logger: "BoundLogger"
     ) -> CCPNCMetadata | None:
@@ -114,64 +272,71 @@ class CCPNCMagresParser(MagresParser):
             with open(json_file_path) as f:
                 magres_json_data = json.load(f)
             logger.info(f"Successfully loaded JSON data from {json_file_path}")
-            logger.debug(f"JSON data keys: {list(magres_json_data.keys())}")
+
+            # Use the common populate method
+            return self.populate_metadata_from_dict(
+                metadata_dict=magres_json_data,
+                calculation_params=None,  # JSON already has all data
+                logger=logger
+            )
+
         except (OSError, json.JSONDecodeError) as e:
             logger.error(f"Failed to read or parse JSON file {json_file_path}: {e}")
             return None
     
-        # Create metadata objects
-        ccpnc_metadata = CCPNCMetadata()
-        material_properties = MaterialProperties()
-        orcid = ORCID()
-        ccpnc_record = CCPNCRecord()
-        external_database_reference = ExternalDatabaseReference()
-        free_text_metadata = FreeTextMetadata()
-        publication_record = PublicationRecord()
+        # # Create metadata objects
+        # ccpnc_metadata = CCPNCMetadata()
+        # material_properties = MaterialProperties()
+        # orcid = ORCID()
+        # ccpnc_record = CCPNCRecord()
+        # external_database_reference = ExternalDatabaseReference()
+        # free_text_metadata = FreeTextMetadata()
+        # publication_record = PublicationRecord()
 
-        # Parse material properties
-        material_properties.chemical_name = magres_json_data.get("chemname", "")
-        material_properties.formula = magres_json_data.get("formula", "")
-        material_properties.stoichiometry = magres_json_data.get("stochiometry", "")
-        material_properties.elements_ratios = magres_json_data.get(
-            "elements_ratios", ""
-            )
-        logger.debug(f"Extracted chemical_name: {material_properties.chemical_name}")
+        # # Parse material properties
+        # material_properties.chemical_name = magres_json_data.get("chemname", "")
+        # material_properties.formula = magres_json_data.get("formula", "")
+        # material_properties.stoichiometry = magres_json_data.get("stochiometry", "")
+        # material_properties.elements_ratios = magres_json_data.get(
+        #     "elements_ratios", ""
+        #     )
+        # logger.debug(f"Extracted chemical_name: {material_properties.chemical_name}")
 
-        # material_properties.chemical_name_tokens =
-        orcid.orcid_id = magres_json_data.get("ORCID", "")
-        logger.debug(f"Extracted ORCID: {orcid.orcid_id}")
+        # # material_properties.chemical_name_tokens =
+        # orcid.orcid_id = magres_json_data.get("ORCID", "")
+        # logger.debug(f"Extracted ORCID: {orcid.orcid_id}")
 
-        # ccpnc_record.visible =
-        ccpnc_record.immutable_id = magres_json_data.get("immutable_id", "")
-        logger.debug(f"Extracted immutable_id: {ccpnc_record.immutable_id}")
+        # # ccpnc_record.visible =
+        # ccpnc_record.immutable_id = magres_json_data.get("immutable_id", "")
+        # logger.debug(f"Extracted immutable_id: {ccpnc_record.immutable_id}")
 
-        # Parse version metadata
-        version_metadata = magres_json_data.get("version_metadata", {})
-        ccpnc_record.license = version_metadata.get("license", "")
-        external_database_reference.external_database_name = version_metadata.get(
-            "extref_type", ""
-            )
-        external_database_reference.external_database_reference_code = (
-            version_metadata.get("extref_code", "")
-        )
-        free_text_metadata.uploader_author_notes = version_metadata.get("notes", "")
-        free_text_metadata.structural_descriptor_notes = version_metadata.get(
-            "chemform", ""
-            )
+        # # Parse version metadata
+        # version_metadata = magres_json_data.get("version_metadata", {})
+        # ccpnc_record.license = version_metadata.get("license", "")
+        # external_database_reference.external_database_name = version_metadata.get(
+        #     "extref_type", ""
+        #     )
+        # external_database_reference.external_database_reference_code = (
+        #     version_metadata.get("extref_code", "")
+        # )
+        # free_text_metadata.uploader_author_notes = version_metadata.get("notes", "")
+        # free_text_metadata.structural_descriptor_notes = version_metadata.get(
+        #     "chemform", ""
+        #     )
 
-        # Parse publication record
-        publication_record.doi = version_metadata.get("doi", "")
+        # # Parse publication record
+        # publication_record.doi = version_metadata.get("doi", "")
 
-        # Assemble the metadata
-        ccpnc_metadata.material_properties = material_properties
-        ccpnc_metadata.orcid = orcid
-        ccpnc_metadata.ccpnc_record = ccpnc_record
-        ccpnc_metadata.external_database_reference = external_database_reference
-        ccpnc_metadata.free_text_metadata = free_text_metadata
-        ccpnc_metadata.publication_record = publication_record
+        # # Assemble the metadata
+        # ccpnc_metadata.material_properties = material_properties
+        # ccpnc_metadata.orcid = orcid
+        # ccpnc_metadata.ccpnc_record = ccpnc_record
+        # ccpnc_metadata.external_database_reference = external_database_reference
+        # ccpnc_metadata.free_text_metadata = free_text_metadata
+        # ccpnc_metadata.publication_record = publication_record
 
-        logger.info("Successfully created CCPNCMetadata object")
-        return ccpnc_metadata
+        # logger.info("Successfully created CCPNCMetadata object")
+        # return ccpnc_metadata
 
     def parse_outputs_with_nmr_schema(
         self,
@@ -432,8 +597,40 @@ class CCPNCMagresParser(MagresParser):
         else:
             logger.warning("Could not parse NMR outputs")
 
-        # Parse JSON file and extract metadata
-        ccpnc_metadata = self.parse_json_file(filepath=self.mainfile, logger=logger)
+        # Parse metadata - try JSON first, then CSV, then create empty metadata
+        logger.warning("=== STARTING METADATA PARSING ===")
+        ccpnc_metadata = None  # Initialize to None first
+        metadata_source = None  # Track where metadata came from
+
+        # Try JSON file first (for legacy compatibility)
+        logger.warning("Attempting JSON file parsing...")
+        json_metadata = self.parse_json_file(filepath=self.mainfile, logger=logger)
+        if json_metadata:
+            logger.info("Using JSON file for metadata")
+            # parse_json_file already returns CCPNCMetadata, so use it directly
+            ccpnc_metadata = json_metadata
+            metadata_source = 'json'
+        else:
+            # Try CSV file
+            logger.info("No JSON file found, trying CSV file")
+            metadata_dict = self.parse_csv_metadata(
+                filepath=self.mainfile,
+                target_filename=self.basename,
+                logger=logger
+            )
+            
+            if metadata_dict:
+                logger.info("Using CSV file for metadata")
+                ccpnc_metadata = self.populate_metadata_from_dict(
+                    metadata_dict=metadata_dict,
+                    calculation_params=calculation_params,
+                    logger=logger
+                )
+                metadata_source = 'csv'
+            else:
+                logger.warning("No metadata source found (neither JSON nor CSV)")
+                metadata_source = None
+
         if ccpnc_metadata:
             simulation.ccpnc_metadata = ccpnc_metadata
             logger.info("Successfully assigned CCPNC metadata to simulation")
