@@ -1,5 +1,4 @@
 from nomad.datamodel.data import (
-    ArchiveSection,
     EntryData,
 )
 from nomad.datamodel.metainfo.annotations import (
@@ -80,7 +79,9 @@ class CCPNCMetadataELN(EntryData):
             'other',
             'n/a',
         ]),
-        description='External database name where additional information on the material exists',
+        description=(
+            'External database name where additional information on the material exists'
+        ),
         a_eln=ELNAnnotation(
             component=ELNComponentEnum.EnumEditQuantity,
             label='External Database Name',
@@ -90,7 +91,10 @@ class CCPNCMetadataELN(EntryData):
     # Other database name
     external_database_name_other = Quantity(
         type=str,
-        description='External database name where additional information on the material exists.',
+        description=(
+            'External database name where additional information on the material '
+            'exists.'
+        ),
         a_eln=ELNAnnotation(
             component=ELNComponentEnum.StringEditQuantity,
             label='Other External Database Name (lowercase only)',
@@ -100,7 +104,10 @@ class CCPNCMetadataELN(EntryData):
     # Database reference code
     external_database_reference_code = Quantity(
         type=str,
-        description='Specific database code pointing to the material or a polymorphic form of the material.',
+        description=(
+            'Specific database code pointing to the material or a polymorphic form '
+            'of the material.'
+        ),
         a_eln=ELNAnnotation(
             component=ELNComponentEnum.StringEditQuantity,
             label='External Database Reference Code',
@@ -110,7 +117,9 @@ class CCPNCMetadataELN(EntryData):
     # Free text metadata fields
     structural_descriptor_notes = Quantity(
         type=str,
-        description='Additional notes specific to the polymorphic forms of the material.',
+        description=(
+            'Additional notes specific to the polymorphic forms of the material.'
+        ),
         a_eln=ELNAnnotation(
             component=ELNComponentEnum.StringEditQuantity,
             label='Additional relevant descriptors (e.g.: phase, conformers, etc.)',
@@ -119,7 +128,9 @@ class CCPNCMetadataELN(EntryData):
 
     uploader_author_notes = Quantity(
         type=str,
-        description='Additional metadata that authors want to indicate about the computation.',
+        description=(
+            'Additional metadata that authors want to indicate about the computation.'
+        ),
         a_eln=ELNAnnotation(
             component=ELNComponentEnum.StringEditQuantity,
             label='Author\'s Notes',
