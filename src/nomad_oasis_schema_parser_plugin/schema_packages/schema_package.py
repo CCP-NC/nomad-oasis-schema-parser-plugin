@@ -170,20 +170,6 @@ class CCPNCMetadata(ArchiveSection):
     free_text_metadata = SubSection(section_def=FreeTextMetadata)
     publication_record = SubSection(section_def=PublicationRecord)
 
-class RawFileMagresData(EntryData):
-    """
-    Section for a magres data file entry.
-    This links the raw magres file to its metadata ELN entry.
-    """
-    metadata_entry = Quantity(
-        type=Reference(CCPNCMetadataELN.m_def),
-        description='Reference to the metadata ELN entry',
-        a_eln=ELNAnnotation(
-            component='ReferenceEditQuantity',
-            label='Metadata Entry',
-        ),
-    )
-
 # Define the CCPNCSimulation class holding CCP-NC specific metadata
 class CCPNCSimulation(Simulation):
     ccpnc_metadata = SubSection(section_def=CCPNCMetadata)
