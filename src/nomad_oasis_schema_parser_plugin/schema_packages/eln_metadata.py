@@ -74,11 +74,11 @@ class CCPNCMetadataELN(EntryData):
     # Database name - DROP-DOWN
     external_database_name = Quantity(
         type=MEnum([
-            'CSD',
-            'ICSD',
-            'COD',
-            'Other',
-            'N/A',
+            'csd',
+            'icsd',
+            'cod',
+            'other',
+            'n/a',
         ]),
         description='External database name where additional information on the material exists',
         a_eln=ELNAnnotation(
@@ -93,7 +93,7 @@ class CCPNCMetadataELN(EntryData):
         description='External database name where additional information on the material exists.',
         a_eln=ELNAnnotation(
             component=ELNComponentEnum.StringEditQuantity,
-            label='Other External Database Name',
+            label='Other External Database Name (lowercase only)',
         ),
     )
 
