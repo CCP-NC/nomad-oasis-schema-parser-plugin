@@ -3,7 +3,6 @@ import json
 import os
 from typing import (
     TYPE_CHECKING,
-    Optional,
 )
 
 if TYPE_CHECKING:
@@ -54,7 +53,6 @@ from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
     FreeTextMetadata,
     MaterialProperties,
     PublicationRecord,
-    RawFileMagresData,
 )
 from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
     CCPNCSimulation as Simulation,
@@ -124,8 +122,6 @@ class CCPNCMagresParser(MagresParser):
                 # Find the row matching magres filename
                 for row in csv_reader:
                     if row.get('filename', '').strip() == target_filename:
-                        logger.info(f"Found metadata for {target_filename} in CSV")
-                        
                         # Helper function to convert empty strings to None
                         def clean_value(value):
                             """Convert empty/whitespace strings to None"""
@@ -249,38 +245,14 @@ class CCPNCMagresParser(MagresParser):
         """
         Create a separate metadata.archive.json ELN entry if no metadata files exist.
         """
-        logger.warning("=== START: create_metadata_eln ===")
-
-        magres_dir = os.path.dirname(self.mainfile)
-        base_filename = os.path.splitext(self.basename)[0]
-        expected_json_filename = f"{base_filename}.json"
-        expected_json_path = os.path.join(magres_dir, expected_json_filename)
-
-        json_file_exists = os.path.isfile(expected_json_path)
-        csv_pattern = os.path.join(magres_dir, 'metadata_info.csv')
-        csv_file_exists = os.path.isfile(csv_pattern)
-        
-        if json_file_exists or csv_file_exists:
-            logger.warning("Metadata files found - skipping ELN creation")
-            return None
-
-        logger.warning("No metadata files found - creating metadata.archive.json ELN")
-
         try:
-            from nomad_oasis_schema_parser_plugin.schema_packages.eln_metadata import (
-                ORCIDInputELN,
-            )
-            
-            # Create the ELN with initialized ORCID subsection
+            # Create the ELN with initialized CCPNC metadata subsection
             eln_entry = CCPNCMetadataELN()
-            eln_entry.orcid = ORCIDInputELN()
-            
-            logger.warning("✅ Created ELN entry with ORCID subsection")
-            
+
         except Exception as e:
-            logger.warning(f"❌ FAILED: {e}")
+            logger.error(f"Metadata object creation failed: {e}")
             import traceback
-            logger.warning(traceback.format_exc())
+            logger.error(traceback.format_exc())
             return None
 
         file_name = 'metadata.archive.json'
@@ -292,13 +264,11 @@ class CCPNCMagresParser(MagresParser):
                 file_name=file_name,
                 overwrite=False,
             )
-            logger.warning(f"✅ Successfully created {file_name}")
-            logger.warning("=== END: create_metadata_eln (success) ===")
             return reference
         except Exception as e:
-            logger.warning(f"❌ FAILED to create metadata ELN: {e}")
+            logger.error(f"Failed to create metadata ELN: {e}")
             import traceback
-            logger.warning(traceback.format_exc())
+            logger.error(traceback.format_exc())
             return None
 
     def parse_json_file(
@@ -323,10 +293,9 @@ class CCPNCMagresParser(MagresParser):
         )
 
         if not magres_json_file:
-            logger.warning("No JSON file found.")
             logger.warning(
-                "If you have added json file, please name it the same as its magres "
-                "file."
+                "No JSON file found. If you have added a JSON file, please name it the "
+                "same as its magres file."
             )
             return None
         
@@ -336,7 +305,6 @@ class CCPNCMagresParser(MagresParser):
         try:
             with open(json_file_path) as f:
                 magres_json_data = json.load(f)
-            logger.info(f"Successfully loaded JSON data from {json_file_path}")
 
             # Use the common populate method
             return self.populate_metadata_from_dict(
@@ -348,60 +316,6 @@ class CCPNCMagresParser(MagresParser):
         except (OSError, json.JSONDecodeError) as e:
             logger.error(f"Failed to read or parse JSON file {json_file_path}: {e}")
             return None
-    
-        # # Create metadata objects
-        # ccpnc_metadata = CCPNCMetadata()
-        # material_properties = MaterialProperties()
-        # orcid = ORCID()
-        # ccpnc_record = CCPNCRecord()
-        # external_database_reference = ExternalDatabaseReference()
-        # free_text_metadata = FreeTextMetadata()
-        # publication_record = PublicationRecord()
-
-        # # Parse material properties
-        # material_properties.chemical_name = magres_json_data.get("chemname", "")
-        # material_properties.formula = magres_json_data.get("formula", "")
-        # material_properties.stoichiometry = magres_json_data.get("stochiometry", "")
-        # material_properties.elements_ratios = magres_json_data.get(
-        #     "elements_ratios", ""
-        #     )
-        # logger.debug(f"Extracted chemical_name: {material_properties.chemical_name}")
-
-        # # material_properties.chemical_name_tokens =
-        # orcid.orcid_id = magres_json_data.get("ORCID", "")
-        # logger.debug(f"Extracted ORCID: {orcid.orcid_id}")
-
-        # # ccpnc_record.visible =
-        # ccpnc_record.immutable_id = magres_json_data.get("immutable_id", "")
-        # logger.debug(f"Extracted immutable_id: {ccpnc_record.immutable_id}")
-
-        # # Parse version metadata
-        # version_metadata = magres_json_data.get("version_metadata", {})
-        # ccpnc_record.license = version_metadata.get("license", "")
-        # external_database_reference.external_database_name = version_metadata.get(
-        #     "extref_type", ""
-        #     )
-        # external_database_reference.external_database_reference_code = (
-        #     version_metadata.get("extref_code", "")
-        # )
-        # free_text_metadata.uploader_author_notes = version_metadata.get("notes", "")
-        # free_text_metadata.structural_descriptor_notes = version_metadata.get(
-        #     "chemform", ""
-        #     )
-
-        # # Parse publication record
-        # publication_record.doi = version_metadata.get("doi", "")
-
-        # # Assemble the metadata
-        # ccpnc_metadata.material_properties = material_properties
-        # ccpnc_metadata.orcid = orcid
-        # ccpnc_metadata.ccpnc_record = ccpnc_record
-        # ccpnc_metadata.external_database_reference = external_database_reference
-        # ccpnc_metadata.free_text_metadata = free_text_metadata
-        # ccpnc_metadata.publication_record = publication_record
-
-        # logger.info("Successfully created CCPNCMetadata object")
-        # return ccpnc_metadata
 
     def parse_outputs_with_nmr_schema(
         self,
@@ -421,7 +335,7 @@ class CCPNCMagresParser(MagresParser):
         model_system = simulation.model_system[-1]
         magres_data = self.magres_file_parser.get('magres')
         if not magres_data:
-            logger.warning('Could not find [magres] data block in magres file.')
+            logger.error('Could not find [magres] data block in magres file.')
             return None
 
         # Create outputs object with references
@@ -444,7 +358,7 @@ class CCPNCMagresParser(MagresParser):
     ) -> bool:
         """Validate that simulation has the required model_system data."""
         if simulation.model_system is None or len(simulation.model_system) == 0:
-            logger.warning(
+            logger.error(
                 'Could not find the ModelSystem that the outputs reference to.'
             )
             return False
@@ -629,7 +543,7 @@ class CCPNCMagresParser(MagresParser):
             # Store sample data for normalizer
             archive._ccpnc_sample = ccpnc_sample
         else:
-            logger.warning("Could not parse model system from magres file")
+            logger.error("Could not parse model system from magres file")
 
         # Parse model method (from parent class)
         model_method = self.parse_model_method(calculation_params=calculation_params)
@@ -660,24 +574,23 @@ class CCPNCMagresParser(MagresParser):
         if outputs is not None:
             simulation.outputs.append(outputs)
         else:
-            logger.warning("Could not parse NMR outputs")
+            logger.error("Could not parse NMR outputs")
 
         # Parse metadata - try JSON first, then CSV, then create empty metadata
-        logger.warning("=== STARTING METADATA PARSING ===")
         ccpnc_metadata = None  # Initialize to None first
         metadata_source = None  # Track where metadata came from
 
         # Try JSON file first (for legacy compatibility)
-        logger.warning("Attempting JSON file parsing...")
+        logger.info("Seaqrching for JSON metadata file...")
         json_metadata = self.parse_json_file(filepath=self.mainfile, logger=logger)
         if json_metadata:
-            logger.info("Using JSON file for metadata")
-            # parse_json_file already returns CCPNCMetadata, so use it directly
+            logger.info("Using JSON file for populating metadata")
+            # Use CCPNCMetadata returned by parse_json_file
             ccpnc_metadata = json_metadata
             metadata_source = 'json'
         else:
             # Try CSV file
-            logger.info("No JSON file found, trying CSV file")
+            logger.info("No JSON file found, searching for CSV file...")
             metadata_dict = self.parse_csv_metadata(
                 filepath=self.mainfile,
                 target_filename=self.basename,
@@ -685,7 +598,7 @@ class CCPNCMagresParser(MagresParser):
             )
             
             if metadata_dict:
-                logger.info("Using CSV file for metadata")
+                logger.info("Using CSV file for populating metadata")
                 ccpnc_metadata = self.populate_metadata_from_dict(
                     metadata_dict=metadata_dict,
                     calculation_params=calculation_params,
@@ -693,50 +606,25 @@ class CCPNCMagresParser(MagresParser):
                 )
                 metadata_source = 'csv'
             else:
-                logger.warning("No metadata source found (neither JSON nor CSV)")
+                logger.info("JSON or CSV metadata source not found")
                 metadata_source = None
 
         if ccpnc_metadata:
             simulation.ccpnc_metadata = ccpnc_metadata
             logger.info("Successfully assigned CCPNC metadata to simulation")
-        else:
-            logger.warning("No CCPNC metadata could be extracted")
 
-        # CREATE ELN ENTRY BEFORE SETTING archive.data
-        # This should happen only if no metadata sources were found
-        logger.warning("=== CHECKING IF ELN CREATION IS NEEDED ===")
-        logger.warning(f"Metadata source found: {metadata_source}")
-        
+        # Create ELN entry - this should happen only if no metadata sources were found
         if metadata_source is None:
-            logger.warning("No metadata source found - attempting ELN creation")
-            logger.warning(f"archive type: {type(archive)}")
-            logger.warning(f"archive.metadata.upload_id: {getattr(archive.metadata, 'upload_id', 'NOT SET')}")
-            logger.warning(f"archive.m_context type: {type(archive.m_context)}")
+            logger.warning("No metadata source found - creating ELN entry")
 
             # Create metadata ELN before setting archive.data
             metadata_reference = self.create_metadata_eln(archive=archive, logger=logger)
 
-            logger.warning(f"create_metadata_eln returned: {metadata_reference}")
-
             # Store the reference in the simulation
             if metadata_reference:
-                logger.warning("Metadata reference exists - storing in simulation")
                 simulation.metadata_eln_reference = metadata_reference
-                logger.warning(f"Set simulation.metadata_eln_reference to: {metadata_reference}")
             else:
-                logger.warning("No metadata reference returned - ELN creation failed or skipped")
-        else:
-            logger.warning(f"Metadata source '{metadata_source}' found - skipping ELN creation")
-
-        # NOW set archive.data after ELN creation attempt
-        logger.warning("=== SETTING archive.data ===")
-        # ccpnc_metadata = self.parse_json_file(filepath=self.mainfile, logger=logger)
-        # if ccpnc_metadata:
-        #     simulation.ccpnc_metadata = ccpnc_metadata
-        #     logger.info("Successfully assigned CCPNC metadata to simulation")
-        # else:
-        #     logger.warning("No CCPNC metadata could be extracted")
+                logger.warning("ELN creation failed or skipped")
 
         archive.data = simulation
         logger.info("Successfully assigned simulation to archive.data")
-        logger.warning("=== PARSER END ===")
