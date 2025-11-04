@@ -188,8 +188,12 @@ class CCPNCMagresParser(MagresParser):
         # Parse material properties
         material_properties.chemical_name = get_value_or_none(metadata_dict, "chemname")
         material_properties.formula = get_value_or_none(metadata_dict, "formula")
-        material_properties.stoichiometry = get_value_or_none(metadata_dict, "stochiometry")
-        material_properties.elements_ratios = get_value_or_none(metadata_dict, "elements_ratios")
+        material_properties.stoichiometry = get_value_or_none(
+            metadata_dict, "stochiometry"
+        )
+        material_properties.elements_ratios = get_value_or_none(
+            metadata_dict, "elements_ratios"
+        )
 
         # Parse ORCID
         orcid.orcid_id = get_value_or_none(metadata_dict, "ORCID")
@@ -203,8 +207,8 @@ class CCPNCMagresParser(MagresParser):
         external_database_reference.external_database_name = get_value_or_none(
             version_metadata, "extref_type"
         )
-        external_database_reference.external_database_reference_code = get_value_or_none(
-            version_metadata, "extref_code"
+        external_database_reference.external_database_reference_code = (
+            get_value_or_none(version_metadata, "extref_code")
         )
         free_text_metadata.uploader_author_notes = get_value_or_none(
             version_metadata, "notes"
@@ -618,7 +622,9 @@ class CCPNCMagresParser(MagresParser):
             logger.warning("No metadata source found - creating ELN entry")
 
             # Create metadata ELN before setting archive.data
-            metadata_reference = self.create_metadata_eln(archive=archive, logger=logger)
+            metadata_reference = self.create_metadata_eln(
+                archive=archive, logger=logger
+            )
 
             # Store the reference in the simulation
             if metadata_reference:
