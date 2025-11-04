@@ -9,13 +9,16 @@ from nomad.normalizing.results import ResultsNormalizer
 if TYPE_CHECKING:
     pass
 
-from nomad_oasis_schema_parser_plugin.schema_packages.eln_metadata import (
-    CCPNCMetadataELN,
-)
+
 from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
     ORCID,
     CCPNCMetadata,
+    CCPNCRecord,
     CCPNCSimulation,
+    ExternalDatabaseReference,
+    FreeTextMetadata,
+    MaterialProperties,
+    PublicationRecord,
 )
 
 
@@ -51,10 +54,9 @@ class CCPNCNormalizer(Normalizer):
                     archive, archive._ccpnc_calculation_params
                 )
 
-        # === METADATA SYNCHRONIZATION ===
-        # Only for magres entries (CCPNCSimulation)
+        # METADATA SYNCHRONIZATION - Only for magres entries (CCPNCSimulation)
         if isinstance(archive.data, CCPNCSimulation):
-            self.logger.warning("🔵 Normalizer: Processing CCPNCSimulation")
+            self.logger.info("Normalizer: Processing CCPNCSimulation")
             self._synchronize_metadata_from_eln(archive)
 
     def _populate_simulation_dft(
@@ -93,82 +95,128 @@ class CCPNCNormalizer(Normalizer):
 
     def _synchronize_metadata_from_eln(self, archive: EntryArchive) -> None:
         """
-        Synchronize ORCID metadata from metadata.archive.json.
-        
+        Synchronize metadata from metadata.archive.json.
+        Maps ELN level fields to hierarchical CCPNCMetadata structure.
+    
         This runs when the user clicks 'Reprocess' on the magres entry.
         """
-        self.logger.warning("="*60)
-        self.logger.warning("📂 METADATA SYNCHRONIZATION (ORCID only)")
-        self.logger.warning("="*60)
+        # Helper function
+        def update_field(parent_obj, parent_class, field_name, new_value, display_name):
+            """Helper to update a field with logging"""
+            if not new_value:  # Skip empty strings and None
+                return parent_obj
+            
+            # Initialise parent if needed
+            if not parent_obj:
+                parent_obj = parent_class()
+            
+            old_value = getattr(parent_obj, field_name, None)
+            if old_value != new_value:
+                setattr(parent_obj, field_name, new_value)
+            
+            return parent_obj
         
         try:
             from nomad.datamodel.context import ServerContext
             if not isinstance(archive.m_context, ServerContext):
-                self.logger.warning("⚠️ Not in ServerContext")
+                self.logger.warning("Not in ServerContext")
                 return
             
             metadata_file = "metadata.archive.json"
             
-            if not archive.m_context.raw_path_exists(metadata_file):
-                self.logger.warning(f"⚠️ {metadata_file} not found")
-                self.logger.warning("="*60)
-                return
-            
-            self.logger.warning(f"✅ Found {metadata_file}")
-            
-            # Read the file
+            # Read the metadata file
+            import json
             with archive.m_context.raw_file(metadata_file, "r") as f:
-                import json
                 metadata_dict = json.load(f)
             
-            if 'data' not in metadata_dict:
-                self.logger.warning("⚠️ No 'data' section")
-                self.logger.warning("="*60)
-                return
+            eln_data = metadata_dict['data']
             
-            data_dict = metadata_dict['data']
-            
-            # Verify schema
-            if 'm_def' in data_dict and 'CCPNCMetadataELN' not in data_dict['m_def']:
-                self.logger.warning("⚠️ Wrong schema type")
-                self.logger.warning("="*60)
-                return
-            
-            # === SYNC ORCID ===
-            self.logger.warning("🔄 Syncing ORCID to simulation...")
-            
+            # Extract ELN DATA
             simulation = archive.data
             
             # Initialize ccpnc_metadata if needed
             if not simulation.ccpnc_metadata:
                 simulation.ccpnc_metadata = CCPNCMetadata()
-                self.logger.warning("   Created CCPNCMetadata section")
             
-            # Extract ORCID from nested structure
-            if 'orcid' in data_dict and isinstance(data_dict['orcid'], dict):
-                orcid_data = data_dict['orcid']
-                if 'orcid_id' in orcid_data and orcid_data['orcid_id']:
-                    # Initialize ORCID if needed
-                    if not simulation.ccpnc_metadata.orcid:
-                        simulation.ccpnc_metadata.orcid = ORCID()
-                    
-                    old_value = simulation.ccpnc_metadata.orcid.orcid_id
-                    new_value = orcid_data['orcid_id']
-                    
-                    if old_value != new_value:
-                        simulation.ccpnc_metadata.orcid.orcid_id = new_value
-                        self.logger.warning(f"   ✅ ORCID: {old_value or '(empty)'} → {new_value}")
-                    else:
-                        self.logger.warning(f"   ℹ️ ORCID unchanged: {old_value}")
-                else:
-                    self.logger.warning("   ⚠️ ORCID data found but orcid_id is empty")
-            else:
-                self.logger.warning("   ⚠️ No ORCID data in metadata file")
+            # Material Properties mapping
+            simulation.ccpnc_metadata.material_properties = update_field(
+                simulation.ccpnc_metadata.material_properties,
+                MaterialProperties,
+                'chemical_name',
+                eln_data.get('chemical_name'),
+                'Chemical Name'
+            )
             
-            self.logger.warning("="*60)
+            # ORCID mapping
+            simulation.ccpnc_metadata.orcid = update_field(
+                simulation.ccpnc_metadata.orcid,
+                ORCID,
+                'orcid_id',
+                eln_data.get('orcid_id'),
+                'ORCID ID'
+            )
+
+            # License mapping
+            simulation.ccpnc_metadata.ccpnc_record = update_field(
+                simulation.ccpnc_metadata.ccpnc_record,
+                CCPNCRecord,
+                'license',
+                eln_data.get('license'),
+                'License'
+            )
+
+            # Publication DOI mapping
+            simulation.ccpnc_metadata.publication_record = update_field(
+                simulation.ccpnc_metadata.publication_record,
+                PublicationRecord,
+                'doi',
+                eln_data.get('doi'),
+                'Publication DOI'
+            )
+
+            # External Database Reference mapping
+            simulation.ccpnc_metadata.external_database_reference = update_field(
+                simulation.ccpnc_metadata.external_database_reference,
+                ExternalDatabaseReference,
+                'external_database_name',
+                eln_data.get('external_database_name'),
+                'External Database Name'
+            )
+
+            simulation.ccpnc_metadata.external_database_reference = update_field(
+                simulation.ccpnc_metadata.external_database_reference,
+                ExternalDatabaseReference,
+                'external_database_name_other',
+                eln_data.get('external_database_name_other'),
+                'Other External Database Name'
+            )
+
+            simulation.ccpnc_metadata.external_database_reference = update_field(
+                simulation.ccpnc_metadata.external_database_reference,
+                ExternalDatabaseReference,
+                'external_database_reference_code',
+                eln_data.get('external_database_reference_code'),
+                'External Database Reference Code'
+            )
+
+            # Free Text Metadata mapping
+            simulation.ccpnc_metadata.free_text_metadata = update_field(
+                simulation.ccpnc_metadata.free_text_metadata,
+                FreeTextMetadata,
+                'structural_descriptor_notes',
+                eln_data.get('structural_descriptor_notes'),
+                'Additonal structural descriptors'
+            )
+
+            simulation.ccpnc_metadata.free_text_metadata = update_field(
+                simulation.ccpnc_metadata.free_text_metadata,
+                FreeTextMetadata,
+                'uploader_author_notes',
+                eln_data.get('uploader_author_notes'),
+                'Author\'s Notes'
+            )
             
         except Exception as e:
-            self.logger.warning(f"❌ Error: {e}")
+            self.logger.warning(f"Error: {e}")
             import traceback
             self.logger.warning(traceback.format_exc())
-            self.logger.warning("="*60)
