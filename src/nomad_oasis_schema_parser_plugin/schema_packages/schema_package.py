@@ -127,7 +127,7 @@ class ExternalDatabaseReference(ArchiveSection):
         type=str,
         description="""
         External database name where additional information on the material exists.
-        Use this field if 'Other' is selected in the 'external_database_name' field.
+        Use this field if 'other' is selected in the 'external_database_name' field.
         """,
     )
 
