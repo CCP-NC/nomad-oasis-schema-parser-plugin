@@ -8,7 +8,6 @@ if TYPE_CHECKING:
 import numpy as np
 from nomad.config import config
 from nomad.datamodel.data import ArchiveSection, EntryData
-from nomad.datamodel.metainfo.annotations import ELNAnnotation
 from nomad.metainfo import JSON, Quantity, Reference, SchemaPackage, SubSection
 from nomad_simulations.schema_packages.general import Simulation
 
