@@ -123,6 +123,14 @@ class ExternalDatabaseReference(ArchiveSection):
         """,
     )
 
+    external_database_name_other = Quantity(
+        type=str,
+        description="""
+        External database name where additional information on the material exists.
+        Use this field if 'Other' is selected in the 'external_database_name' field.
+        """,
+    )
+
     external_database_reference_code = Quantity(
         type=str,
         description="""
