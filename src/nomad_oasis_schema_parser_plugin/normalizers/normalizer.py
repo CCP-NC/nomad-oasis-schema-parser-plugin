@@ -1,9 +1,16 @@
 from typing import TYPE_CHECKING
 
+from nomad import atomutils
+from nomad.atomutils import Formula
 from nomad.datamodel import EntryArchive
 from nomad.datamodel.results import DFT as OldModelDFT
+from nomad.datamodel.results import Relation, System
 from nomad.datamodel.results import Simulation as OldModelSimulation
 from nomad.normalizing import Normalizer
+from nomad.normalizing.common import (
+    ase_atoms_from_nomad_atoms,
+    cell_from_ase_atoms,
+)
 from nomad.normalizing.results import ResultsNormalizer
 
 if TYPE_CHECKING:
@@ -42,9 +49,6 @@ class CCPNCNormalizer(Normalizer):
         results_normalizer.logger = self.logger
         
         if hasattr(archive, '_ccpnc_sample') and hasattr(archive, '_ccpnc_measurement'):
-            # Normalize sample using the results normalizer
-            results_normalizer.normalize_sample(archive._ccpnc_sample)
-
             # Normalize measurement using the results normalizer
             results_normalizer.normalize_measurement(archive._ccpnc_measurement)
 
@@ -54,10 +58,83 @@ class CCPNCNormalizer(Normalizer):
                     archive, archive._ccpnc_calculation_params
                 )
 
+            # Populate topology using the run section atoms reference
+            if hasattr(archive, '_ccpnc_sec_run'):
+                self._populate_topology(
+                    archive, 
+                    archive._ccpnc_sec_run.system[0].atoms,
+                    logger=self.logger
+                )
+
         # METADATA SYNCHRONIZATION - Only for magres entries (CCPNCSimulation)
         if isinstance(archive.data, CCPNCSimulation):
             self.logger.info("Normalizer: Processing CCPNCSimulation")
             self._synchronize_metadata_from_eln(archive)
+
+    def _populate_topology(
+        self, archive: EntryArchive, atoms_data, logger=None
+    ) -> None:
+        """Populate the topology section with atoms_ref and cell information."""
+        
+        # Check if topology already exists
+        existing_topology = archive.m_xpath('results.material.topology')
+        if existing_topology:
+            self.logger.info("Topology already exists, skipping population")
+            return
+        
+        try:
+            # Get masses if available
+            masses = atomutils.get_masses_from_computational_model(
+                archive, repr_system=None
+            )
+
+            # Create the topology list
+            topology: list[System] = []
+
+            # Create ASE compatible Atoms object from atoms_data
+            ase_atoms = ase_atoms_from_nomad_atoms(atoms_data)
+
+            # Extract composition data from atoms
+            elements = list(set(ase_atoms.get_chemical_symbols()))
+            n_atoms = len(ase_atoms)
+        
+            # Create chemical formula object using NOMAD's Formula utility
+            formula_obj = Formula(ase_atoms.get_chemical_formula())
+            
+            # Create the original/root system with composition data
+            original_system = System(
+                method='parser',
+                label='original',
+                description='A representative system from the CCPNC calculation.',
+                system_relation=Relation(type='root'),
+                atoms_ref=atoms_data,
+                # Add composition information
+                elements=elements,
+                chemical_formula_hill=formula_obj.format('hill'),
+                chemical_formula_reduced=formula_obj.format('reduced'),
+                chemical_formula_iupac=formula_obj.format('iupac'),
+                chemical_formula_descriptive=formula_obj.format('descriptive'),
+                chemical_formula_anonymous=formula_obj.format('anonymous'),
+                n_atoms=n_atoms,
+            )
+            
+            # Update cell information for structure viewer
+            original_system.cell = cell_from_ase_atoms(
+                ase_atoms,
+                masses=masses,
+                atom_labels=getattr(atoms_data, 'labels', None)
+            )
+            index = len(topology)
+            original_system.system_id = f'results/material/topology/{index}'
+            topology.append(original_system)
+            archive.results.material.topology = topology
+            
+        except Exception as e:
+            self.logger.error(
+                'Failed to populate topology',
+                exc_info=e,
+                error=str(e)
+            )
 
     def _populate_simulation_dft(
         self, archive: EntryArchive, calculation_params: dict

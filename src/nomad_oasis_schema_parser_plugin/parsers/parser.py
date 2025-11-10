@@ -13,9 +13,11 @@ if TYPE_CHECKING:
         BoundLogger,
     )
 
+import numpy as np
 from nomad.config import config
 from nomad.datamodel import EntryArchive
 from nomad.datamodel.metainfo.workflow import Workflow
+from nomad.units import ureg
 from nomad_nmr_schema.schema_packages.schema_package import (
     ElectricFieldGradient,
     IndirectSpinSpinCoupling,
@@ -36,6 +38,10 @@ from nomad_parser_magres.parsers.parser import MagresParser
 # from nomad_parser_magres.parsers.parser import MagresParser
 from nomad_simulations.schema_packages.atoms_state import AtomsState
 from nomad_simulations.schema_packages.general import Program
+from runschema.run import Program as RunSchemaProgram
+from runschema.run import Run as OldRun
+from runschema.system import Atoms as RunSchemaAtoms
+from runschema.system import System as RunSchemaSystem
 
 # utility function used to get auxiliary files next to the `mainfile`
 from nomad_oasis_schema_parser_plugin.parsers.utils.utils import (
@@ -486,6 +492,45 @@ class CCPNCMagresParser(MagresParser):
         else:
             logger.info("No magnetic susceptibility data found")
 
+    def parse_system_old(
+        self,
+        logger: 'BoundLogger',
+        sec_run: OldRun):
+        """
+        Testing old run for preparing atoms for crystal structure viewing
+        """
+        sec_atoms = RunSchemaAtoms()
+        sec_system = RunSchemaSystem()
+
+        atoms_old = self.magres_file_parser.get('atoms', [])
+        if not atoms_old:
+            logger.error("Parse error - No atoms found in atoms object")
+            return None
+
+        # Store lattice_vectors and periodic boundary conditions
+        lattice_vectors_old = np.reshape(np.array(atoms_old.get('lattice', [])), (3, 3))
+        sec_atoms.lattice_vectors = lattice_vectors_old * ureg.angstrom
+        pbc = (
+            [True, True, True] if lattice_vectors_old is not None else [False, False, False]
+        )
+        sec_atoms.periodic = pbc
+
+        # Storing atom positions and labels
+        atoms_list = atoms_old.get('atom', [])
+        if len(atoms_list) == 0:
+            logger.error("No atom lists found in atoms object")
+            return None
+        atom_labels = []
+        atom_positions = []
+        for atom in atoms_list:
+            atom_labels.append(atom[0])
+            atom_positions.append(atom[3:])  # Ensure only x,y,z are taken
+        sec_atoms.labels = atom_labels
+        sec_atoms.positions = atom_positions * ureg.angstrom
+
+        sec_system.atoms = sec_atoms
+        sec_run.system.append(sec_system)
+
     def parse(
         self,
         filepath: str,
@@ -529,23 +574,29 @@ class CCPNCMagresParser(MagresParser):
         if model_system is not None:
             simulation.model_system.append(model_system)
 
-            # Extract unique chemical symbols from particle_states
-            unique_elements = list(set(
-                ps.chemical_symbol for ps in model_system.particle_states 
-                if ps.chemical_symbol
-            ))
             # Create a sample class to populate results using normalizer
             class CCPNCSample:
-                def __init__(self, elements):
-                    self.elements = elements
+                def __init__(self):
+                    self.elements = []  # Empty list - let normalizer calculate from topology
                     self.chemical_formula = None
                     self.name = None
 
-            # Create ccpnc sample object with extracted elements
-            ccpnc_sample = CCPNCSample(unique_elements)
+            # Create ccpnc sample object without pre-populating elements
+            ccpnc_sample = CCPNCSample()
 
             # Store sample data for normalizer
             archive._ccpnc_sample = ccpnc_sample
+
+            # Prepare sec_run for system parsing
+            sec_run = OldRun()
+            self.parse_system_old(logger=logger, sec_run=sec_run)
+            sec_run.program = RunSchemaProgram(
+                name=calculation_params.get('code', 'Unknown'),
+                version=calculation_params.get('code_version', ''),
+                )
+
+            archive._ccpnc_sec_run = sec_run
+            archive.run.append(sec_run)   
         else:
             logger.error("Could not parse model system from magres file")
 
