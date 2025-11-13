@@ -555,20 +555,44 @@ class CCPNCMagresParser(MagresParser):
 
         # Parse magres file structure and calculation parameters (from parent class)
         calculation_params = self.magres_file_parser.get('calculation', {})
-        if calculation_params.get('code', '') != 'CASTEP':
+        code = calculation_params.get('code', '')
+
+        # If code is a list as in QE-GIPAW cases, join it into a string and update dict
+        if isinstance(code, list):
+            code = ' '.join(str(c) for c in code)
+            calculation_params['code'] = code  # Update the dict with the fixed value
             logger.warning(
-                'Non-CASTEP NMR simulations may not be fully supported.'
+                'calc_code was parsed as a list, joining into string',
+                result=code,
             )
+
+        # Validate supported codes
+        supported_codes = ['CASTEP', 'QE']
+        is_supported = any(supported in code for supported in supported_codes)
+
+        if not is_supported:
+            logger.error(
+                'Only CASTEP and QE-GIPAW based NMR simulations are currently supported'
+                'by the CCPNC magres parser. Found calc_code: "%s"', code
+            )
+            return
+
         # Add XC functional mappings to calculation_params for the normalizer
         calculation_params['_xc_functional_type_map'] = self._xc_functional_type_map
         calculation_params['_xc_functional_map'] = self._xc_functional_map
 
-        # Set program information
-        simulation.program = Program(
-            name=calculation_params.get('code', 'Unknown'),
-            version=calculation_params.get('code_version', ''),
+        # Parse program information
+        # Note: Older QE-GIPAW generated magres files may have limited metadata in the
+        # calculation block, have incomplete or vague version information
+        # (e.g., calc_code_version='git'). The parser attempts to extract version
+        # from calc_code field when necessary.
+        program_name, program_version = self._parse_program_info(
+            calculation_params, logger
         )
-
+        simulation.program = Program(
+            name=program_name,
+            version=program_version,
+        )
         # Parse model system (from parent class)
         model_system = self.parse_model_system(logger=logger)
         if model_system is not None:
@@ -591,8 +615,8 @@ class CCPNCMagresParser(MagresParser):
             sec_run = OldRun()
             self.parse_system_old(logger=logger, sec_run=sec_run)
             sec_run.program = RunSchemaProgram(
-                name=calculation_params.get('code', 'Unknown'),
-                version=calculation_params.get('code_version', ''),
+                name=program_name,
+                version=program_version,
                 )
 
             archive._ccpnc_sec_run = sec_run
