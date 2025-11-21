@@ -30,7 +30,7 @@ dependencies = [
     "nomad-parser-plugins-electronic>=1.0",
     "nomad-schema-plugin-run>=1.0.1",
     "nomad-parser-plugins-atomistic>=1.0.6",
-    "nomad-parser-magres @ git+https://github.com/FAIRmat-NFDI/nomad-parser-magres.git@1c47825c309c6caf5aac8d38d0a346b3f97350b8",
+    "nomad-parser-magres @ git+https://github.com/FAIRmat-NFDI/nomad-parser-magres.git@0c5cf73118b91d2c4bf0e6d699a8b9c9ba8e055e",
     "nomad-nmr-schema @ git+https://github.com/FAIRmat-NFDI/nomad-schema-plugin-nmr.git@cbecd3e37679b7a5ad3d0c65e0b37d87b1f599a4",
 ]
 
