@@ -122,7 +122,7 @@ class CCPNCMagresParser(MagresParser):
         csv_file_path = csv_files[0]
 
         try:
-            with open(csv_file_path, 'r', encoding='utf-8') as f:
+            with open(csv_file_path, encoding='utf-8') as f:
                 csv_reader = csv.DictReader(f)
                 
                 # Find the row matching magres filename
@@ -511,7 +511,9 @@ class CCPNCMagresParser(MagresParser):
         lattice_vectors_old = np.reshape(np.array(atoms_old.get('lattice', [])), (3, 3))
         sec_atoms.lattice_vectors = lattice_vectors_old * ureg.angstrom
         pbc = (
-            [True, True, True] if lattice_vectors_old is not None else [False, False, False]
+            [True, True, True] 
+            if lattice_vectors_old is not None 
+            else [False, False, False]
         )
         sec_atoms.periodic = pbc
 
@@ -531,181 +533,205 @@ class CCPNCMagresParser(MagresParser):
         sec_system.atoms = sec_atoms
         sec_run.system.append(sec_system)
 
-    def parse(
-        self,
-        filepath: str,
-        archive: 'EntryArchive',
-        logger: 'BoundLogger',
-        child_archives: dict[str, 'EntryArchive'] = None,
-    ) -> None:
-        self.mainfile = filepath
-        self.maindir = os.path.dirname(self.mainfile)
-        self.basename = os.path.basename(self.mainfile)
-        self.archive = archive
-  
-        # Initialize the magres file parser (from parent class)
-        self.init_parser(logger=logger)
-        self._check_units_magres(logger=logger)
+def parse(
+    self,
+    filepath: str,
+    archive: 'EntryArchive',
+    logger: 'BoundLogger',
+    child_archives: dict[str, 'EntryArchive'] = None,
+) -> None:
+    self._initialize_parser(filepath, archive, logger)
+    
+    calculation_params = self._prepare_calculation_params(logger)
+    if not calculation_params:
+        return
+        
+    simulation = self._create_simulation(calculation_params, logger)
+    if not simulation:
+        return
+        
+    self._process_metadata(simulation, calculation_params, logger)
+    archive.data = simulation
+    logger.info("Successfully assigned simulation to archive.data")
 
-        # Create workflow
-        archive.workflow2 = Workflow(name='CCPNC Magres Processing')
+def _initialize_parser(
+    self, 
+    filepath: str, 
+    archive: 'EntryArchive', 
+    logger: 'BoundLogger'
+) -> None:
+    """Initialize parser attributes and workflow."""
+    self.mainfile = filepath
+    self.maindir = os.path.dirname(self.mainfile)
+    self.basename = os.path.basename(self.mainfile)
+    self.archive = archive
+    
+    self.init_parser(logger=logger)
+    self._check_units_magres(logger=logger)
+    archive.workflow2 = Workflow(name='CCPNC Magres Processing')
 
-        # Adding Simulation to data
-        simulation = Simulation()
-
-        # Parse magres file structure and calculation parameters (from parent class)
-        calculation_params = self.magres_file_parser.get('calculation', {})
-        code = calculation_params.get('code', '')
-
-        # If code is a list as in QE-GIPAW cases, join it into a string and update dict
-        if isinstance(code, list):
-            code = ' '.join(str(c) for c in code)
-            calculation_params['code'] = code  # Update the dict with the fixed value
-            logger.warning(
-                'calc_code was parsed as a list, joining into string',
-                result=code,
-            )
-
-        # Validate supported codes
-        supported_codes = ['CASTEP', 'QE']
-        is_supported = any(supported in code for supported in supported_codes)
-
-        if not is_supported:
-            logger.error(
-                'Only CASTEP and QE-GIPAW based NMR simulations are currently supported'
-                'by the CCPNC magres parser. Found calc_code: "%s"', code
-            )
-            return
-
-        # Add XC functional mappings to calculation_params for the normalizer
-        calculation_params['_xc_functional_type_map'] = self._xc_functional_type_map
-        calculation_params['_xc_functional_map'] = self._xc_functional_map
-
-        # Parse program information
-        # Note: Older QE-GIPAW generated magres files may have limited metadata in the
-        # calculation block, have incomplete or vague version information
-        # (e.g., calc_code_version='git'). The parser attempts to extract version
-        # from calc_code field when necessary.
-        program_name, program_version = self._parse_program_info(
-            calculation_params, logger
+def _prepare_calculation_params(self, logger: 'BoundLogger') -> dict | None:
+    """Prepare and validate calculation parameters."""
+    calculation_params = self.magres_file_parser.get('calculation', {})
+    code = calculation_params.get('code', '')
+    
+    # Handle QE-GIPAW list case
+    if isinstance(code, list):
+        code = ' '.join(str(c) for c in code)
+        calculation_params['code'] = code
+        logger.warning(
+            'calc_code was parsed as a list, joining into string', result=code
         )
-        simulation.program = Program(
-            name=program_name,
-            version=program_version,
+    
+    # Validate supported codes
+    supported_codes = ['CASTEP', 'QE']
+    if not any(supported in code for supported in supported_codes):
+        logger.error(
+            'Only CASTEP and QE-GIPAW based NMR simulations are currently supported'
+            'by the CCPNC magres parser. Found calc_code: "%s"', code
         )
-        # Parse model system (from parent class)
-        model_system = self.parse_model_system(logger=logger)
-        if model_system is not None:
-            simulation.model_system.append(model_system)
+        return None
+    
+    # Add XC functional mappings
+    calculation_params['_xc_functional_type_map'] = self._xc_functional_type_map
+    calculation_params['_xc_functional_map'] = self._xc_functional_map
+    
+    return calculation_params
 
-            # Create a sample class to populate results using normalizer
-            class CCPNCSample:
-                def __init__(self):
-                    self.elements = []  # Empty list - let normalizer calculate from topology
-                    self.chemical_formula = None
-                    self.name = None
+def _create_simulation(
+    self, 
+    calculation_params: dict, 
+    logger: 'BoundLogger'
+) -> Simulation | None:
+    """Create simulation with program, model system, method, and outputs."""
+    simulation = Simulation()
+    
+    # Parse program information
+    program_name, program_version = self._parse_program_info(calculation_params, logger)
+    simulation.program = Program(name=program_name, version=program_version)
+    
+    # Parse model system
+    if not self._setup_model_system(simulation, program_name, program_version, logger):
+        return None
+    
+    # Parse model method
+    model_method = self.parse_model_method(calculation_params=calculation_params)
+    simulation.model_method.append(model_method)
+    
+    # Setup archive data for normalizer
+    self._setup_archive_data(calculation_params)
+    
+    # Parse NMR outputs
+    outputs = self.parse_outputs_with_nmr_schema(simulation=simulation, logger=logger)
+    if outputs is not None:
+        simulation.outputs.append(outputs)
+    else:
+        logger.error("Could not parse NMR outputs")
+    
+    return simulation
 
-            # Create ccpnc sample object without pre-populating elements
-            ccpnc_sample = CCPNCSample()
+def _setup_model_system(
+    self, 
+    simulation: Simulation, 
+    program_name: str, 
+    program_version: str, 
+    logger: 'BoundLogger'
+) -> bool:
+    """Setup model system and related archive data."""
+    model_system = self.parse_model_system(logger=logger)
+    if model_system is None:
+        logger.error("Could not parse model system from magres file")
+        return False
+    
+    simulation.model_system.append(model_system)
+    
+    # Create sample class for normalizer
+    class CCPNCSample:
+        def __init__(self):
+            self.elements = []
+            self.chemical_formula = None
+            self.name = None
+    
+    self.archive._ccpnc_sample = CCPNCSample()
+    
+    # Setup sec_run for system parsing
+    sec_run = OldRun()
+    self.parse_system_old(logger=logger, sec_run=sec_run)
+    sec_run.program = RunSchemaProgram(name=program_name, version=program_version)
+    
+    self.archive._ccpnc_sec_run = sec_run
+    self.archive.run.append(sec_run)
+    
+    return True
 
-            # Store sample data for normalizer
-            archive._ccpnc_sample = ccpnc_sample
+def _setup_archive_data(self, calculation_params: dict) -> None:
+    """Setup archive data for normalizer."""
+    class CCPNCMeasurement:
+        def __init__(self):
+            self.method_abbreviation = 'NMR'
+            self.sample = []
+        
+        def m_xpath(self, path):
+            return None
+    
+    self.archive._ccpnc_measurement = CCPNCMeasurement()
+    self.archive._ccpnc_calculation_params = calculation_params
 
-            # Prepare sec_run for system parsing
-            sec_run = OldRun()
-            self.parse_system_old(logger=logger, sec_run=sec_run)
-            sec_run.program = RunSchemaProgram(
-                name=program_name,
-                version=program_version,
-                )
+def _process_metadata(
+    self, 
+    simulation: Simulation, 
+    calculation_params: dict, 
+    logger: 'BoundLogger'
+) -> None:
+    """Process metadata from JSON, CSV, or create ELN entry."""
+    ccpnc_metadata, metadata_source = self._get_metadata(calculation_params, logger)
+    
+    if ccpnc_metadata:
+        simulation.ccpnc_metadata = ccpnc_metadata
+        logger.info("Successfully assigned CCPNC metadata to simulation")
+    elif metadata_source is None:
+        self._create_eln_entry(simulation, logger)
 
-            archive._ccpnc_sec_run = sec_run
-            archive.run.append(sec_run)   
-        else:
-            logger.error("Could not parse model system from magres file")
-
-        # Parse model method (from parent class)
-        model_method = self.parse_model_method(calculation_params=calculation_params)
-        simulation.model_method.append(model_method)
-
-        # Create a measurement class to populate results using normalizer
-        class CCPNCMeasurement:
-            def __init__(self):
-                self.method_abbreviation = 'NMR'
-                self.sample = []
-
-            def m_xpath(self, path):
-                """Mock m_xpath method that returns None for any path"""
-                return None
-
-        # Create ccpnc measurement object
-        ccpnc_measurement = CCPNCMeasurement()
-
-        # Store measurement data and calculation params for normalizer
-        archive._ccpnc_measurement = ccpnc_measurement
-        archive._ccpnc_calculation_params = calculation_params
-
-        # Parse NMR outputs with magnetic shielding
-        outputs = self.parse_outputs_with_nmr_schema(
-            simulation=simulation,
-            logger=logger,
+def _get_metadata(
+    self, 
+    calculation_params: dict, 
+    logger: 'BoundLogger'
+) -> tuple[CCPNCMetadata | None, str | None]:
+    """Get metadata from JSON or CSV sources."""
+    # Try JSON first
+    logger.info("Searching for JSON metadata file...")
+    json_metadata = self.parse_json_file(filepath=self.mainfile, logger=logger)
+    if json_metadata:
+        logger.info("Using JSON file for populating metadata")
+        return json_metadata, 'json'
+    
+    # Try CSV
+    logger.info("No JSON file found, searching for CSV file...")
+    metadata_dict = self.parse_csv_metadata(
+        filepath=self.mainfile,
+        target_filename=self.basename,
+        logger=logger
+    )
+    
+    if metadata_dict:
+        logger.info("Using CSV file for populating metadata")
+        ccpnc_metadata = self.populate_metadata_from_dict(
+            metadata_dict=metadata_dict,
+            calculation_params=calculation_params,
+            logger=logger
         )
-        if outputs is not None:
-            simulation.outputs.append(outputs)
-        else:
-            logger.error("Could not parse NMR outputs")
+        return ccpnc_metadata, 'csv'
+    
+    logger.info("JSON or CSV metadata source not found")
+    return None, None
 
-        # Parse metadata - try JSON first, then CSV, then create empty metadata
-        ccpnc_metadata = None  # Initialize to None first
-        metadata_source = None  # Track where metadata came from
-
-        # Try JSON file first (for legacy compatibility)
-        logger.info("Seaqrching for JSON metadata file...")
-        json_metadata = self.parse_json_file(filepath=self.mainfile, logger=logger)
-        if json_metadata:
-            logger.info("Using JSON file for populating metadata")
-            # Use CCPNCMetadata returned by parse_json_file
-            ccpnc_metadata = json_metadata
-            metadata_source = 'json'
-        else:
-            # Try CSV file
-            logger.info("No JSON file found, searching for CSV file...")
-            metadata_dict = self.parse_csv_metadata(
-                filepath=self.mainfile,
-                target_filename=self.basename,
-                logger=logger
-            )
-            
-            if metadata_dict:
-                logger.info("Using CSV file for populating metadata")
-                ccpnc_metadata = self.populate_metadata_from_dict(
-                    metadata_dict=metadata_dict,
-                    calculation_params=calculation_params,
-                    logger=logger
-                )
-                metadata_source = 'csv'
-            else:
-                logger.info("JSON or CSV metadata source not found")
-                metadata_source = None
-
-        if ccpnc_metadata:
-            simulation.ccpnc_metadata = ccpnc_metadata
-            logger.info("Successfully assigned CCPNC metadata to simulation")
-
-        # Create ELN entry - this should happen only if no metadata sources were found
-        if metadata_source is None:
-            logger.warning("No metadata source found - creating ELN entry")
-
-            # Create metadata ELN before setting archive.data
-            metadata_reference = self.create_metadata_eln(
-                archive=archive, logger=logger
-            )
-
-            # Store the reference in the simulation
-            if metadata_reference:
-                simulation.metadata_eln_reference = metadata_reference
-            else:
-                logger.warning("ELN creation failed or skipped")
-
-        archive.data = simulation
-        logger.info("Successfully assigned simulation to archive.data")
+def _create_eln_entry(self, simulation: Simulation, logger: 'BoundLogger') -> None:
+    """Create ELN entry when no metadata sources are found."""
+    logger.warning("No metadata source found - creating ELN entry")
+    
+    metadata_reference = self.create_metadata_eln(archive=self.archive, logger=logger)
+    
+    if metadata_reference:
+        simulation.metadata_eln_reference = metadata_reference
+    else:
+        logger.warning("ELN creation failed or skipped")
