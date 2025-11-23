@@ -1,3 +1,4 @@
+import json
 from typing import TYPE_CHECKING
 
 from nomad import atomutils
@@ -21,7 +22,6 @@ from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
     ORCID,
     CCPNCMetadata,
     CCPNCRecord,
-    CCPNCSimulation,
     ExternalDatabaseReference,
     FreeTextMetadata,
     MaterialProperties,
@@ -66,10 +66,15 @@ class CCPNCNormalizer(Normalizer):
                     logger=self.logger
                 )
 
-        # METADATA SYNCHRONIZATION - Only for magres entries (CCPNCSimulation)
-        if isinstance(archive.data, CCPNCSimulation):
-            self.logger.info("Normalizer: Processing CCPNCSimulation")
-            self._synchronize_metadata_from_eln(archive)
+        # Only try to sync from ELN if no metadata exists yet
+        if not (
+            hasattr(archive.data, 'ccpnc_metadata') 
+            and archive.data.ccpnc_metadata is not None
+        ):
+            logger.info("No metadata found, attempting to synchronize from ELN")
+            self._synchronize_metadata_from_eln(archive, logger)
+        else:
+            logger.info("Metadata already present, skipping ELN synchronization")
 
     def _populate_topology(
         self, archive: EntryArchive, atoms_data, logger=None
@@ -170,12 +175,18 @@ class CCPNCNormalizer(Normalizer):
             xc_functional_raw, []
         )
 
-    def _synchronize_metadata_from_eln(self, archive: EntryArchive) -> None:
+    def _synchronize_metadata_from_eln(
+        self, 
+        archive: EntryArchive,
+        logger=None
+        ) -> bool:
         """
-        Synchronize metadata from metadata.archive.json.
+        Synchronize metadata from ELN entry if it exists and no metadata is already 
+        present.
         Maps ELN level fields to hierarchical CCPNCMetadata structure.
-    
-        This runs when the user clicks 'Reprocess' on the magres entry.
+
+        Returns:
+            bool: True if metadata was successfully synchronized, False otherwise
         """
         # Helper function
         def update_field(parent_obj, parent_class, field_name, new_value, display_name):
@@ -192,21 +203,51 @@ class CCPNCNormalizer(Normalizer):
                 setattr(parent_obj, field_name, new_value)
             
             return parent_obj
+
+        # Check if metadata already exists (from JSON or CSV parsing)
+        if (
+            hasattr(archive.data, 'ccpnc_metadata')
+            and archive.data.ccpnc_metadata is not None
+        ):
+            logger.info(
+                "Metadata already exists from JSON/CSV parsing, "
+                "skipping ELN synchronization"
+            )
+            return True
+
+        # Check if ELN reference exists
+        if (
+            not hasattr(archive.data, 'metadata_eln_reference')
+            or archive.data.metadata_eln_reference is None
+        ):
+            logger.info("No ELN reference found, skipping metadata synchronization")
+            return False
+    
+        metadata_file = "metadata.archive.json"
         
         try:
-            from nomad.datamodel.context import ServerContext
-            if not isinstance(archive.m_context, ServerContext):
-                self.logger.warning("Not in ServerContext")
-                return
-            
-            metadata_file = "metadata.archive.json"
-            
-            # Read the metadata file
-            import json
             with archive.m_context.raw_file(metadata_file, "r") as f:
-                metadata_dict = json.load(f)
-            
-            eln_data = metadata_dict['data']
+                metadata_data = json.load(f)
+
+            # Extract the ELN data and convert to CCPNCMetadata
+            eln_data = metadata_data.get("data", {})
+            # Check if there's any ELN data at all
+            if not eln_data:
+                self.logger.warning("No ELN data found in metadata file")
+                return False
+
+            # Check if any relevant fields exist in the ELN data
+            relevant_fields = [
+                'chemical_name', 'orcid_id', 'license', 'doi', 
+                'external_database_name', 'external_database_name_other',
+                'external_database_reference_code', 'structural_descriptor_notes',
+                'uploader_author_notes'
+            ]
+        
+            has_relevant_data = any(eln_data.get(field) for field in relevant_fields)
+            if not has_relevant_data:
+                self.logger.warning("No relevant CCPNC metadata fields found in ELN")
+                return False
             
             # Extract ELN DATA
             simulation = archive.data
@@ -292,8 +333,17 @@ class CCPNCNormalizer(Normalizer):
                 eln_data.get('uploader_author_notes'),
                 'Author\'s Notes'
             )
-            
+
+            self.logger.info("Successfully synchronized metadata from ELN")
+            return True
+
+        except KeyError:
+            self.logger.error(
+                "No ELN metadata file found, which is expected when metadata "
+                "comes from JSON/CSV"
+            )
         except Exception as e:
-            self.logger.warning(f"Error: {e}")
+            self.logger.error(f"Error: {e}")
             import traceback
-            self.logger.warning(traceback.format_exc())
+            self.logger.error(traceback.format_exc())
+        return False
