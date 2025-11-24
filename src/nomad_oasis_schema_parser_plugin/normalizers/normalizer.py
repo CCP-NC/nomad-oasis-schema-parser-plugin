@@ -174,8 +174,12 @@ class CCPNCNormalizer(Normalizer):
             self.logger.info("Using existing simulation section")
 
         # Get program information and populate simulation section
-        program_name = calculation_params.get('code', 'Unknown')
-        program_version = calculation_params.get('code_version', 'Unknown')
+        program_name = 'Unknown'
+        program_version = 'Unknown'
+        if hasattr(archive, 'run') and archive.run and hasattr(archive.run[0], 'program'):
+            run_program = archive.run[0].program
+            program_name = getattr(run_program, 'name', 'Unknown')
+            program_version = getattr(run_program, 'version', 'Unknown')
 
         # Set program name and version
         method.simulation.program_name = program_name
