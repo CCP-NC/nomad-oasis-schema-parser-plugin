@@ -32,7 +32,7 @@ from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
 class CCPNCNormalizer(Normalizer):
     """Normalizer for the CCPNC custom parser."""
 
-    normalizer_level = 1
+    normalizer_level = 3
 
     def normalize(
         self,
@@ -52,12 +52,6 @@ class CCPNCNormalizer(Normalizer):
             # Normalize measurement using the results normalizer
             results_normalizer.normalize_measurement(archive._ccpnc_measurement)
 
-            # Populate the simulation.dft section if we have calculation params
-            if hasattr(archive, '_ccpnc_calculation_params'):
-                self._populate_simulation_dft(
-                    archive, archive._ccpnc_calculation_params
-                )
-
             # Populate topology using the run section atoms reference
             if hasattr(archive, '_ccpnc_sec_run'):
                 self._populate_topology(
@@ -65,6 +59,22 @@ class CCPNCNormalizer(Normalizer):
                     archive._ccpnc_sec_run.system[0].atoms,
                     logger=self.logger
                 )
+
+            # Populate the simulation.dft section if we have calculation params
+            if hasattr(archive, '_ccpnc_calculation_params'):
+                self._populate_simulation_dft(
+                    archive, archive._ccpnc_calculation_params
+                )
+    
+        if archive.results and archive.results.method and archive.results.method.simulation and archive.results.method.simulation.dft:
+            dft = archive.results.method.simulation.dft
+            self.logger.info({
+                "event": "CCPNCNormalizer FINAL DFT VALUES",
+                "xc_functional_type": getattr(dft, 'xc_functional_type', 'MISSING'),
+                "xc_functional_names": getattr(dft, 'xc_functional_names', 'MISSING'),
+                "jacobs_ladder": getattr(dft, 'jacobs_ladder', 'MISSING'),
+                "normalizer": "CCPNCNormalizer"
+            })
 
         # Only try to sync from ELN if no metadata exists yet
         if not (
@@ -146,21 +156,37 @@ class CCPNCNormalizer(Normalizer):
     ) -> None:
         """Populate the simulation.dft section with CCPNC-specific data."""
 
+        # Ensure results.method exists
+        if not hasattr(archive, 'results') or not archive.results:
+            self.logger.warning("No results section found, cannot populate simulation.dft")
+            return
+            
+        if not hasattr(archive.results, 'method') or not archive.results.method:
+            self.logger.warning("No method section found, cannot populate simulation.dft")
+            return
+        
         method = archive.results.method
-
-        # Create simulation section (this was missing!)
-        method.simulation = OldModelSimulation()
+        # Create simulation section
+        if not hasattr(method, 'simulation') or not method.simulation:
+            method.simulation = OldModelSimulation()
+            self.logger.info("Created new simulation section")
+        else:
+            self.logger.info("Using existing simulation section")
 
         # Get program information and populate simulation section
         program_name = calculation_params.get('code', 'Unknown')
         program_version = calculation_params.get('code_version', 'Unknown')
 
-        # Add debugging for program version
+        # Set program name and version
         method.simulation.program_name = program_name
         method.simulation.program_version = program_version
 
         # Create DFT section
-        method.simulation.dft = OldModelDFT()
+        if not hasattr(method.simulation, 'dft') or not method.simulation.dft:
+            method.simulation.dft = OldModelDFT()
+            self.logger.info("Created new DFT section")
+        else:
+            self.logger.info("Using existing DFT section")
 
         # Extract and remove the XC functional mappings
         xc_functional_type_map = calculation_params.pop('_xc_functional_type_map', {})
@@ -168,12 +194,14 @@ class CCPNCNormalizer(Normalizer):
 
         # Extract XC functional information using the passed mappings
         xc_functional_raw = calculation_params.get('xcfunctional', 'LDA')
-        method.simulation.dft.xc_functional_type = xc_functional_type_map.get(
-            xc_functional_raw, 'GGA'
-        )
-        method.simulation.dft.xc_functional_names = xc_functional_map.get(
-            xc_functional_raw, []
-        )
+        # Get mapped values
+        xc_functional_type = xc_functional_type_map.get(xc_functional_raw, 'GGA')
+        xc_functional_names = xc_functional_map.get(xc_functional_raw, [])
+        
+        # Set the values - set both jacobs_ladder AND xc_functional_type
+        method.simulation.dft.jacobs_ladder = xc_functional_type
+        method.simulation.dft.xc_functional_type = xc_functional_type
+        method.simulation.dft.xc_functional_names = xc_functional_names
 
     def _synchronize_metadata_from_eln(
         self, 
