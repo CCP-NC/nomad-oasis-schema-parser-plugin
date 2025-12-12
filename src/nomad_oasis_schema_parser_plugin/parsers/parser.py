@@ -542,6 +542,91 @@ class CCPNCMagresParser(MagresParser):
         sec_system.atoms = sec_atoms
         sec_run.system.append(sec_system)
 
+    def _prepare_sample_and_sec_run(
+        self,
+        simulation,
+        archive,
+        logger,
+        program_name,
+        program_version):
+        # Create a sample class to populate results using normalizer
+        class CCPNCSample:
+            def __init__(self):
+                self.elements = []
+                self.chemical_formula = None
+                self.name = None
+
+        # Create ccpnc sample object without pre-populating elements
+        ccpnc_sample = CCPNCSample()
+
+        # Store sample data for normalizer
+        archive._ccpnc_sample = ccpnc_sample
+
+        # Prepare sec_run for system parsing
+        sec_run = OldRun()
+        self.parse_system_old(logger=logger, sec_run=sec_run)
+        sec_run.program = RunSchemaProgram(
+            name=program_name,
+            version=program_version,
+        )
+
+        archive._ccpnc_sec_run = sec_run
+        archive.run.append(sec_run)
+
+    def _prepare_measurement_and_params(self, archive, calculation_params):
+        class CCPNCMeasurement:
+            def __init__(self):
+                self.method_abbreviation = 'NMR'
+                self.sample = []
+
+            def m_xpath(self, path):
+                """Mock m_xpath method that returns None for any path"""
+                return None
+
+        # Create ccpnc measurement object
+        ccpnc_measurement = CCPNCMeasurement()
+
+        # Store measurement data and calculation params for normalizer
+        archive._ccpnc_measurement = ccpnc_measurement
+        archive._ccpnc_calculation_params = calculation_params
+
+    def _parse_and_attach_metadata(
+        self,
+        simulation,
+        calculation_params,
+        archive,
+        logger):
+        ccpnc_metadata = None
+        metadata_source = None
+
+        json_metadata = self.parse_json_file(filepath=self.mainfile, logger=logger)
+        if json_metadata:
+            ccpnc_metadata = json_metadata
+            metadata_source = 'json'
+        else:
+            metadata_dict = self.parse_csv_metadata(
+                filepath=self.mainfile,
+                target_filename=self.basename,
+                logger=logger
+            )
+            if metadata_dict:
+                ccpnc_metadata = self.populate_metadata_from_dict(
+                    metadata_dict=metadata_dict,
+                    calculation_params=calculation_params,
+                    logger=logger
+                )
+                metadata_source = 'csv'
+
+        if ccpnc_metadata:
+            simulation.ccpnc_metadata = ccpnc_metadata
+
+        if metadata_source is None:
+            metadata_reference = self.create_metadata_eln(
+                archive=archive, logger=logger
+            )
+            if metadata_reference:
+                simulation.metadata_eln_reference = metadata_reference
+
     def parse(
         self,
         filepath: str,
@@ -603,53 +688,15 @@ class CCPNCMagresParser(MagresParser):
         model_system = self.parse_model_system(logger=logger)
         if model_system is not None:
             simulation.model_system.append(model_system)
-
-            # Create a sample class to populate results using normalizer
-            class CCPNCSample:
-                def __init__(self):
-                    self.elements = []  # Empty list - let normalizer calculate from topology
-                    self.chemical_formula = None
-                    self.name = None
-
-            # Create ccpnc sample object without pre-populating elements
-            ccpnc_sample = CCPNCSample()
-
-            # Store sample data for normalizer
-            archive._ccpnc_sample = ccpnc_sample
-
-            # Prepare sec_run for system parsing
-            sec_run = OldRun()
-            self.parse_system_old(logger=logger, sec_run=sec_run)
-            sec_run.program = RunSchemaProgram(
-                name=program_name,
-                version=program_version,
-                )
-
-            archive._ccpnc_sec_run = sec_run
-            archive.run.append(sec_run)   
+            self._prepare_sample_and_sec_run(
+                simulation, archive, logger, program_name, program_version)   
         else:
             logger.error("Could not parse model system from magres file")
 
         # Parse model method (from parent class)
         model_method = self.parse_model_method(calculation_params=calculation_params)
         simulation.model_method.append(model_method)
-
-        # Create a measurement class to populate results using normalizer
-        class CCPNCMeasurement:
-            def __init__(self):
-                self.method_abbreviation = 'NMR'
-                self.sample = []
-
-            def m_xpath(self, path):
-                """Mock m_xpath method that returns None for any path"""
-                return None
-
-        # Create ccpnc measurement object
-        ccpnc_measurement = CCPNCMeasurement()
-
-        # Store measurement data and calculation params for normalizer
-        archive._ccpnc_measurement = ccpnc_measurement
-        archive._ccpnc_calculation_params = calculation_params
+        self._prepare_measurement_and_params(archive, calculation_params)
 
         # Parse NMR outputs with magnetic shielding
         outputs = self.parse_outputs_with_nmr_schema(
@@ -661,57 +708,6 @@ class CCPNCMagresParser(MagresParser):
         else:
             logger.error("Could not parse NMR outputs")
 
-        # Parse metadata - try JSON first, then CSV, then create empty metadata
-        ccpnc_metadata = None  # Initialize to None first
-        metadata_source = None  # Track where metadata came from
-
-        # Try JSON file first (for legacy compatibility)
-        logger.info("Seaqrching for JSON metadata file...")
-        json_metadata = self.parse_json_file(filepath=self.mainfile, logger=logger)
-        if json_metadata:
-            logger.info("Using JSON file for populating metadata")
-            # Use CCPNCMetadata returned by parse_json_file
-            ccpnc_metadata = json_metadata
-            metadata_source = 'json'
-        else:
-            # Try CSV file
-            logger.info("No JSON file found, searching for CSV file...")
-            metadata_dict = self.parse_csv_metadata(
-                filepath=self.mainfile,
-                target_filename=self.basename,
-                logger=logger
-            )
-            
-            if metadata_dict:
-                logger.info("Using CSV file for populating metadata")
-                ccpnc_metadata = self.populate_metadata_from_dict(
-                    metadata_dict=metadata_dict,
-                    calculation_params=calculation_params,
-                    logger=logger
-                )
-                metadata_source = 'csv'
-            else:
-                logger.info("JSON or CSV metadata source not found")
-                metadata_source = None
-
-        if ccpnc_metadata:
-            simulation.ccpnc_metadata = ccpnc_metadata
-            logger.info("Successfully assigned CCPNC metadata to simulation")
-
-        # Create ELN entry - this should happen only if no metadata sources were found
-        if metadata_source is None:
-            logger.warning("No metadata source found - creating ELN entry")
-
-            # Create metadata ELN before setting archive.data
-            metadata_reference = self.create_metadata_eln(
-                archive=archive, logger=logger
-            )
-
-            # Store the reference in the simulation
-            if metadata_reference:
-                simulation.metadata_eln_reference = metadata_reference
-            else:
-                logger.warning("ELN creation failed or skipped")
+        self._parse_and_attach_metadata(simulation, calculation_params, archive, logger)
 
         archive.data = simulation
-        logger.info("Successfully assigned simulation to archive.data")
