@@ -5,6 +5,8 @@ from typing import (
     TYPE_CHECKING,
 )
 
+import ase.data
+
 if TYPE_CHECKING:
     from nomad.datamodel.datamodel import (
         EntryArchive,
@@ -527,6 +529,13 @@ class CCPNCMagresParser(MagresParser):
             atom_positions.append(atom[3:])  # Ensure only x,y,z are taken
         sec_atoms.labels = atom_labels
         sec_atoms.positions = atom_positions * ureg.angstrom
+
+        # Add species (atomic numbers) based on labels
+        try:
+            sec_atoms.species = [
+                ase.data.atomic_numbers.get(label, 0) for label in atom_labels]
+        except Exception as e:
+            logger.error(f"Failed to assign species (atomic numbers) to atoms: {e}")
 
         sec_system.atoms = sec_atoms
         sec_run.system.append(sec_system)
