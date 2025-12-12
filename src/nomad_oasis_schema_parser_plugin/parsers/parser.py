@@ -124,7 +124,7 @@ class CCPNCMagresParser(MagresParser):
         csv_file_path = csv_files[0]
 
         try:
-            with open(csv_file_path, 'r', encoding='utf-8') as f:
+            with open(csv_file_path, encoding='utf-8') as f:
                 csv_reader = csv.DictReader(f)
                 
                 # Find the row matching magres filename
@@ -513,7 +513,9 @@ class CCPNCMagresParser(MagresParser):
         lattice_vectors_old = np.reshape(np.array(atoms_old.get('lattice', [])), (3, 3))
         sec_atoms.lattice_vectors = lattice_vectors_old * ureg.angstrom
         pbc = (
-            [True, True, True] if lattice_vectors_old is not None else [False, False, False]
+            [True, True, True] 
+            if lattice_vectors_old is not None 
+            else [False, False, False]
         )
         sec_atoms.periodic = pbc
 
@@ -570,10 +572,6 @@ class CCPNCMagresParser(MagresParser):
         if isinstance(code, list):
             code = ' '.join(str(c) for c in code)
             calculation_params['code'] = code  # Update the dict with the fixed value
-            logger.warning(
-                'calc_code was parsed as a list, joining into string',
-                result=code,
-            )
 
         # Validate supported codes
         supported_codes = ['CASTEP', 'QE']
@@ -592,9 +590,8 @@ class CCPNCMagresParser(MagresParser):
 
         # Parse program information
         # Note: Older QE-GIPAW generated magres files may have limited metadata in the
-        # calculation block, have incomplete or vague version information
-        # (e.g., calc_code_version='git'). The parser attempts to extract version
-        # from calc_code field when necessary.
+        # calculation block, (e.g., calc_code_version='git'). The parser attempts to 
+        # extract version from calc_code field when necessary.
         program_name, program_version = self._parse_program_info(
             calculation_params, logger
         )

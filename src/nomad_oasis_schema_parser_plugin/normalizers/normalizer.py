@@ -66,7 +66,9 @@ class CCPNCNormalizer(Normalizer):
                     archive, archive._ccpnc_calculation_params
                 )
     
-        if archive.results and archive.results.method and archive.results.method.simulation and archive.results.method.simulation.dft:
+        if (archive.results and archive.results.method and 
+            archive.results.method.simulation and 
+            archive.results.method.simulation.dft):
             dft = archive.results.method.simulation.dft
             self.logger.info({
                 "event": "CCPNCNormalizer FINAL DFT VALUES",
@@ -158,11 +160,15 @@ class CCPNCNormalizer(Normalizer):
 
         # Ensure results.method exists
         if not hasattr(archive, 'results') or not archive.results:
-            self.logger.warning("No results section found, cannot populate simulation.dft")
+            self.logger.warning(
+                "No results section found, cannot populate simulation.dft"
+            )
             return
             
         if not hasattr(archive.results, 'method') or not archive.results.method:
-            self.logger.warning("No method section found, cannot populate simulation.dft")
+            self.logger.warning(
+                "No method section found, cannot populate simulation.dft"
+            )
             return
         
         method = archive.results.method
@@ -176,7 +182,8 @@ class CCPNCNormalizer(Normalizer):
         # Get program information and populate simulation section
         program_name = 'Unknown'
         program_version = 'Unknown'
-        if hasattr(archive, 'run') and archive.run and hasattr(archive.run[0], 'program'):
+        if (hasattr(archive, 'run') and archive.run and 
+            hasattr(archive.run[0], 'program')):
             run_program = archive.run[0].program
             program_name = getattr(run_program, 'name', 'Unknown')
             program_version = getattr(run_program, 'version', 'Unknown')
