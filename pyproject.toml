@@ -38,7 +38,7 @@ dependencies = [
 Repository = "https://github.com/CCP-NC/nomad-oasis-schema-parser-plugin"
 
 [project.optional-dependencies]
-dev = ["ruff", "pytest", "structlog"]
+dev = ["ruff", "pytest", "structlog","python-logstash"]
 
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
