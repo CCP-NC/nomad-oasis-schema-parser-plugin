@@ -78,6 +78,27 @@ class CCPNCNormalizer(Normalizer):
                 "normalizer": "CCPNCNormalizer"
             })
 
+        # List of fields to check and populate from topology[0] if missing or empty
+        fields = [
+            "elements",
+            "chemical_formula_descriptive",
+            "chemical_formula_reduced",
+            "chemical_formula_hill",
+            "chemical_formula_iupac",
+            "chemical_formula_anonymous",]
+        if (
+            hasattr(archive, "results")
+            and hasattr(archive.results, "material")
+            and hasattr(archive.results.material, "topology")
+            and archive.results.material.topology
+        ):
+            topo_buffer = archive.results.material.topology[0]
+            for field in fields:
+                value = getattr(archive.results.material, field, None)
+                topo_value = getattr(topo_buffer, field, None)
+                if not value and topo_value:
+                    setattr(archive.results.material, field, topo_value)
+
         # Only try to sync from ELN if no metadata exists yet
         if not (
             hasattr(archive.data, 'ccpnc_metadata') 
