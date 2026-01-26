@@ -101,6 +101,10 @@ class CCPNCNormalizer(Normalizer):
         
         # Populate element-resolved magnetic shielding from normalized outputs
         self._populate_element_resolved_magnetic_shielding(archive, logger)
+
+        # Populate element-resolved electric field gradient from normalized outputs
+        self._populate_element_resolved_electric_field_gradient(archive, logger)
+
         # Only try to sync from ELN if no metadata exists yet
         if not (
             hasattr(archive.data, 'ccpnc_metadata') 
@@ -264,6 +268,161 @@ class CCPNCNormalizer(Normalizer):
             f"Successfully populated element-resolved magnetic shielding with "
             f"{len(element_isotropy_list)} entries."
         )
+
+    def _process_electric_field_gradient_entry_normalized(
+        self, i, efg, particle_states_ref, logger, ElementVzzEntry
+    ):
+        """
+        Process a single electric field gradient entry using pre-computed Vzz values.
+        
+        Args:
+            i: Index of the entry
+            efg: ElectricFieldGradient object with normalized Vzz
+            particle_states_ref: List of particle states for matching entity_ref
+            logger: Logger instance
+            ElementVzzEntry: Class for creating Vzz entries
+            
+        Returns:
+            ElementVzzEntry or None if entry is invalid
+        """
+        entity_ref = getattr(efg, 'entity_ref', None)
+        vzz = getattr(efg, 'Vzz', None)
+        
+        if entity_ref is None:
+            logger.warning(f"Skipping EFG entry {i}: missing entity_ref.")
+            return None
+            
+        if vzz is None:
+            logger.warning(f"Skipping EFG entry {i}: Vzz not computed.")
+            return None
+        
+        atom = next((ps for ps in particle_states_ref if entity_ref is ps), None)
+        if atom is None:
+            logger.warning(
+                f"Skipping EFG entry {i}: could not match entity_ref to any "
+                "particle_state."
+            )
+            return None
+        
+        chemical_symbol = getattr(atom, 'chemical_symbol', None)
+        if chemical_symbol is None:
+            logger.warning(f"Skipping EFG entry {i}: could not resolve chemical_symbol.")
+            return None
+        
+        entry = ElementVzzEntry()
+        entry.element = chemical_symbol
+        entry.Vzz = vzz
+        return entry
+
+    def _group_and_set_vzz(
+        self,
+        element_vzz_list,
+        efg_section,
+        VzzEntry
+    ):
+        """
+        Group Vzz values by element and set element-specific Vzz lists.
+        
+        Args:
+            element_vzz_list: List of ElementVzzEntry objects
+            efg_section: ElementResolvedElectricFieldGradient section to populate
+            VzzEntry: Class for creating Vzz entries
+        """
+        element_groups = {}
+        for entry in element_vzz_list:
+            element = entry.element
+            if element not in element_groups:
+                element_groups[element] = []
+            element_groups[element].append(entry.Vzz)
+        
+        for element, vzz_values in element_groups.items():
+            attr_name = f"{element}_vzz_list"
+            if hasattr(efg_section, attr_name):
+                setattr(
+                    efg_section,
+                    attr_name,
+                    [VzzEntry(Vzz=vzz) for vzz in vzz_values]
+                )
+
+    def _populate_element_resolved_electric_field_gradient(
+        self, 
+        archive: EntryArchive, 
+        logger
+    ) -> None:
+        """
+        Populate the element_resolved_electric_field_gradient section using 
+        pre-computed Vzz values from normalized ElectricFieldGradient objects.
+        """
+        # Validate archive structure
+        if not hasattr(archive.data, 'outputs') or len(archive.data.outputs) == 0:
+            logger.info("No outputs found for element-resolved electric field gradient.")
+            return
+        
+        if not hasattr(archive.data, 'model_system') or len(archive.data.model_system) == 0:
+            logger.info("No model_system found for element-resolved electric field gradient.")
+            return
+
+        outputs_ref = archive.data.outputs[0]
+        model_system_ref = archive.data.model_system[0]
+        particle_states_ref = getattr(model_system_ref, 'particle_states', None)
+        
+        if not particle_states_ref:
+            logger.warning("No particle_states found in model_system.")
+            return
+
+        efg_list = getattr(outputs_ref, 'electric_field_gradients', None)
+        if not efg_list or len(efg_list) == 0:
+            logger.info("No electric_field_gradients found in outputs.")
+            return
+
+        # Import schema classes
+        from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
+            ElementResolvedElectricFieldGradient,
+            ElementResolvedNMRSearch,
+            ElementVzzEntry,
+            VzzEntry,
+        )
+
+        # Ensure all electric field gradient objects are normalized
+        for efg in efg_list:
+            if hasattr(efg, 'normalize') and not hasattr(efg, '_normalized'):
+                efg.normalize(archive, logger)
+                efg._normalized = True
+
+        # Process each electric field gradient entry
+        element_vzz_list = [
+            self._process_electric_field_gradient_entry_normalized(
+                i, efg, particle_states_ref, logger, ElementVzzEntry
+            )
+            for i, efg in enumerate(efg_list)
+        ]
+        element_vzz_list = [
+            entry for entry in element_vzz_list if entry is not None
+        ]
+
+        if not element_vzz_list:
+            logger.warning("No valid electric field gradient entries to populate.")
+            return
+
+        # Create element-resolved sections
+        efg_section = ElementResolvedElectricFieldGradient()
+        self._group_and_set_vzz(element_vzz_list, efg_section, VzzEntry)
+        efg_section.element_vzz_list = element_vzz_list
+
+        # Get or create element_resolved_nmr_search section
+        if hasattr(archive.data, 'element_resolved_nmr_search') and archive.data.element_resolved_nmr_search:
+            element_section = archive.data.element_resolved_nmr_search
+        else:
+            element_section = ElementResolvedNMRSearch()
+            archive.data.element_resolved_nmr_search = element_section
+
+        element_section.element_resolved_electric_field_gradient = efg_section
+        
+        logger.info(
+            f"Successfully populated element-resolved electric field gradient with "
+            f"{len(element_vzz_list)} entries."
+        )
+
     def _populate_topology(
         self, archive: EntryArchive, atoms_data, logger=None
     ) -> None:
