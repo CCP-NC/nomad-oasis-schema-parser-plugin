@@ -98,7 +98,9 @@ class CCPNCNormalizer(Normalizer):
                 topo_value = getattr(topo_buffer, field, None)
                 if not value and topo_value:
                     setattr(archive.results.material, field, topo_value)
-
+        
+        # Populate element-resolved magnetic shielding from normalized outputs
+        self._populate_element_resolved_magnetic_shielding(archive, logger)
         # Only try to sync from ELN if no metadata exists yet
         if not (
             hasattr(archive.data, 'ccpnc_metadata') 
@@ -109,6 +111,159 @@ class CCPNCNormalizer(Normalizer):
         else:
             logger.info("Metadata already present, skipping ELN synchronization")
 
+    def _process_magnetic_shielding_entry_normalized(
+        self, i, ms, particle_states_ref, logger, ElementIsotropyEntry
+    ):
+        """
+        Process a single magnetic shielding entry using pre-computed isotropy values.
+        
+        Args:
+            i: Index of the entry
+            ms: MagneticShielding object with normalized isotropy
+            particle_states_ref: List of particle states for matching entity_ref
+            logger: Logger instance
+            ElementIsotropyEntry: Class for creating isotropy entries
+            
+        Returns:
+            ElementIsotropyEntry or None if entry is invalid
+        """
+        entity_ref = getattr(ms, 'entity_ref', None)
+        isotropy = getattr(ms, 'isotropy', None)
+        
+        if entity_ref is None:
+            logger.warning(f"Skipping MS entry {i}: missing entity_ref.")
+            return None
+            
+        if isotropy is None:
+            logger.warning(f"Skipping MS entry {i}: isotropy not computed.")
+            return None
+        
+        atom = next((ps for ps in particle_states_ref if entity_ref is ps), None)
+        if atom is None:
+            logger.warning(
+                f"Skipping MS entry {i}: could not match entity_ref to any "
+                "particle_state."
+            )
+            return None
+        
+        chemical_symbol = getattr(atom, 'chemical_symbol', None)
+        if chemical_symbol is None:
+            logger.warning(f"Skipping MS entry {i}: could not resolve chemical_symbol.")
+            return None
+        
+        entry = ElementIsotropyEntry()
+        entry.element = chemical_symbol
+        entry.isotropy = isotropy
+        return entry
+
+    def _group_and_set_isotropies(
+        self,
+        element_isotropy_list,
+        ms_section,
+        IsotropyEntry
+    ):
+        """
+        Group isotropy values by element and set element-specific isotropy lists.
+        
+        Args:
+            element_isotropy_list: List of ElementIsotropyEntry objects
+            ms_section: ElementResolvedMagneticShielding section to populate
+            IsotropyEntry: Class for creating isotropy entries
+        """
+        element_groups = {}
+        for entry in element_isotropy_list:
+            element = entry.element
+            if element not in element_groups:
+                element_groups[element] = []
+            element_groups[element].append(entry.isotropy)
+        
+        for element, isotropies in element_groups.items():
+            attr_name = f"{element}_isotropy_list"
+            if hasattr(ms_section, attr_name):
+                setattr(
+                    ms_section,
+                    attr_name,
+                    [IsotropyEntry(isotropy=iso) for iso in isotropies]
+                )
+
+    def _populate_element_resolved_magnetic_shielding(
+        self, 
+        archive: EntryArchive, 
+        logger
+    ) -> None:
+        """
+        Populate the element_resolved_magnetic_shielding section using 
+        pre-computed isotropy values from normalized MagneticShielding objects.
+        """
+        # Validate archive structure
+        if not hasattr(archive.data, 'outputs') or len(archive.data.outputs) == 0:
+            logger.info("No outputs found for element-resolved magnetic shielding.")
+            return
+        
+        if not hasattr(archive.data, 'model_system') or len(archive.data.model_system) == 0:
+            logger.info("No model_system found for element-resolved magnetic shielding.")
+            return
+
+        outputs_ref = archive.data.outputs[0]
+        model_system_ref = archive.data.model_system[0]
+        particle_states_ref = getattr(model_system_ref, 'particle_states', None)
+        
+        if not particle_states_ref:
+            logger.warning("No particle_states found in model_system.")
+            return
+
+        ms_list = getattr(outputs_ref, 'magnetic_shieldings', None)
+        if not ms_list or len(ms_list) == 0:
+            logger.info("No magnetic_shieldings found in outputs.")
+            return
+
+        # Import schema classes
+        from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
+            ElementIsotropyEntry,
+            ElementResolvedMagneticShielding,
+            ElementResolvedNMRSearch,
+            IsotropyEntry,
+        )
+
+        # Ensure all magnetic shielding objects are normalized
+        for ms in ms_list:
+            if hasattr(ms, 'normalize') and not hasattr(ms, '_normalized'):
+                ms.normalize(archive, logger)
+                ms._normalized = True
+
+        # Process each magnetic shielding entry
+        element_isotropy_list = [
+            self._process_magnetic_shielding_entry_normalized(
+                i, ms, particle_states_ref, logger, ElementIsotropyEntry
+            )
+            for i, ms in enumerate(ms_list)
+        ]
+        element_isotropy_list = [
+            entry for entry in element_isotropy_list if entry is not None
+        ]
+
+        if not element_isotropy_list:
+            logger.warning("No valid magnetic shielding entries to populate.")
+            return
+
+        # Create element-resolved sections
+        ms_section = ElementResolvedMagneticShielding()
+        self._group_and_set_isotropies(element_isotropy_list, ms_section, IsotropyEntry)
+        ms_section.element_isotropy_list = element_isotropy_list
+
+        # Get or create element_resolved_nmr_search section
+        if hasattr(archive.data, 'element_resolved_nmr_search') and archive.data.element_resolved_nmr_search:
+            element_section = archive.data.element_resolved_nmr_search
+        else:
+            element_section = ElementResolvedNMRSearch()
+            archive.data.element_resolved_nmr_search = element_section
+
+        element_section.element_resolved_magnetic_shielding = ms_section
+        
+        logger.info(
+            f"Successfully populated element-resolved magnetic shielding with "
+            f"{len(element_isotropy_list)} entries."
+        )
     def _populate_topology(
         self, archive: EntryArchive, atoms_data, logger=None
     ) -> None:
