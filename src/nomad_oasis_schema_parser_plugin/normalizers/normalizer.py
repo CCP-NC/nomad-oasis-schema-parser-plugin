@@ -204,8 +204,13 @@ class CCPNCNormalizer(Normalizer):
             logger.info("No outputs found for element-resolved magnetic shielding.")
             return
         
-        if not hasattr(archive.data, 'model_system') or len(archive.data.model_system) == 0:
-            logger.info("No model_system found for element-resolved magnetic shielding.")
+        if (
+            not hasattr(archive.data, 'model_system')
+            or len(archive.data.model_system) == 0
+        ):
+            logger.info(
+                "No model_system found for element-resolved magnetic shielding."
+            )
             return
 
         outputs_ref = archive.data.outputs[0]
@@ -256,7 +261,10 @@ class CCPNCNormalizer(Normalizer):
         ms_section.element_isotropy_list = element_isotropy_list
 
         # Get or create element_resolved_nmr_search section
-        if hasattr(archive.data, 'element_resolved_nmr_search') and archive.data.element_resolved_nmr_search:
+        if (
+            hasattr(archive.data, 'element_resolved_nmr_search')
+            and archive.data.element_resolved_nmr_search
+        ):
             element_section = archive.data.element_resolved_nmr_search
         else:
             element_section = ElementResolvedNMRSearch()
@@ -306,7 +314,9 @@ class CCPNCNormalizer(Normalizer):
         
         chemical_symbol = getattr(atom, 'chemical_symbol', None)
         if chemical_symbol is None:
-            logger.warning(f"Skipping EFG entry {i}: could not resolve chemical_symbol.")
+            logger.warning(
+                f"Skipping EFG entry {i}: could not resolve chemical_symbol."
+            )
             return None
         
         entry = ElementVzzEntry()
@@ -355,11 +365,18 @@ class CCPNCNormalizer(Normalizer):
         """
         # Validate archive structure
         if not hasattr(archive.data, 'outputs') or len(archive.data.outputs) == 0:
-            logger.info("No outputs found for element-resolved electric field gradient.")
+            logger.info(
+                "No outputs found for element-resolved electric field gradient."
+                )
             return
         
-        if not hasattr(archive.data, 'model_system') or len(archive.data.model_system) == 0:
-            logger.info("No model_system found for element-resolved electric field gradient.")
+        if (
+            not hasattr(archive.data, 'model_system')
+            or len(archive.data.model_system) == 0
+        ):
+            logger.info(
+                "No model_system found for element-resolved electric field gradient."
+                )
             return
 
         outputs_ref = archive.data.outputs[0]
@@ -410,7 +427,10 @@ class CCPNCNormalizer(Normalizer):
         efg_section.element_vzz_list = element_vzz_list
 
         # Get or create element_resolved_nmr_search section
-        if hasattr(archive.data, 'element_resolved_nmr_search') and archive.data.element_resolved_nmr_search:
+        if (
+            hasattr(archive.data, 'element_resolved_nmr_search')
+            and archive.data.element_resolved_nmr_search
+        ):
             element_section = archive.data.element_resolved_nmr_search
         else:
             element_section = ElementResolvedNMRSearch()

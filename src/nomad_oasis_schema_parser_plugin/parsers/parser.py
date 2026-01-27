@@ -33,7 +33,6 @@ from nomad_nmr_schema.schema_packages.schema_package import (
 from nomad_nmr_schema.schema_packages.schema_package import (
     Outputs as NMROutputs,
 )
-from nomad_nmr_schema.schema_packages.tensor_utils import NMRTensor, TensorConvention
 
 # Import the original magres parser and NMR schema components
 from nomad_parser_magres.parsers.parser import MagresParser
