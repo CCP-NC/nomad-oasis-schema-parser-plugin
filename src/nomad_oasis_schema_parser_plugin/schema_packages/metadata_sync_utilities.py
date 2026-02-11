@@ -1,3 +1,5 @@
+import re
+
 from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
     ORCID,
     CCPNCMetadata,
@@ -9,50 +11,61 @@ from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
 )
 
 
-def create_ccpnc_metadata_from_dict(metadata_dict, calculation_params, logger):
-    def get_value_or_none(data, key, default=None):
-        value = data.get(key, default)
-        if isinstance(value, str) and value.strip() == '':
-            return None
-        return value
+def get_value_or_none(data, key, default=None):
+    """Extract value from dict, returning None for empty strings."""
+    value = data.get(key, default)
+    if isinstance(value, str) and value.strip() == '':
+        return None
+    return value
 
-    import re
 
-    def tokenize_name(name):
-        sep = re.compile(r'[0-9,\'\(\)\[\]\s\-]+')
-        tokens = [tk.lower() for tk in sep.split(name) if len(tk) > 1]
-        result_tokens = set()
-        name_lower = name.lower()
-        # Always add the original name (lowercased)
-        result_tokens.add(name_lower)
-        if not tokens:
-            return list(result_tokens)
-        for tk in tokens:
-            # Find all positions of token in the original name
-            for match in re.finditer(re.escape(tk), name_lower):
-                start, end = match.start(), match.end()
-                # Check if token is at the very start of the string
-                at_start = start == 0
-                # Check if token is at the very end of the string
-                at_end = end == len(name_lower)
-                
-                # Always add the base token
-                result_tokens.add(tk)
-                
-                # Add appropriate wildcard variants based on position
-                if at_start and at_end:
-                    # Standalone token, no wildcards needed
-                    pass
-                elif at_start:
-                    # Token at start, add token* (something after)
-                    result_tokens.add(f'{tk}*')
-                elif at_end:
-                    # Token at end, add *token (something before)
-                    result_tokens.add(f'*{tk}')
-                else:
-                    # Token in the middle, add *token* (something before and after)
-                    result_tokens.add(f'*{tk}*')
+def tokenize_name(name):
+    """Tokenize chemical name with position-aware wildcards for search.
+    
+    Args:
+        name: Chemical name string to tokenize
+        
+    Returns:
+        List of tokens including original name and wildcard variants
+        based on token position (start/middle/end)
+    """
+    sep = re.compile(r'[0-9,\'\(\)\[\]\s\-]+')
+    tokens = [tk.lower() for tk in sep.split(name) if len(tk) > 1]
+    result_tokens = set()
+    name_lower = name.lower()
+    # Always add the original name (lowercased)
+    result_tokens.add(name_lower)
+    if not tokens:
         return list(result_tokens)
+    for tk in tokens:
+        # Find all positions of token in the original name
+        for match in re.finditer(re.escape(tk), name_lower):
+            start, end = match.start(), match.end()
+            # Check if token is at the very start of the string
+            at_start = start == 0
+            # Check if token is at the very end of the string
+            at_end = end == len(name_lower)
+            
+            # Always add the base token
+            result_tokens.add(tk)
+            
+            # Add appropriate wildcard variants based on position
+            if at_start and at_end:
+                # Standalone token, no wildcards needed
+                pass
+            elif at_start:
+                # Token at start, add token* (something after)
+                result_tokens.add(f'{tk}*')
+            elif at_end:
+                # Token at end, add *token (something before)
+                result_tokens.add(f'*{tk}')
+            else:
+                # Token in the middle, add *token* (something before and after)
+                result_tokens.add(f'*{tk}*')
+    return list(result_tokens)
+
+
+def create_ccpnc_metadata_from_dict(metadata_dict, calculation_params, logger):
 
     ccpnc_metadata = CCPNCMetadata()
     material_properties = MaterialProperties()
