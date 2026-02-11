@@ -53,6 +53,9 @@ from nomad_oasis_schema_parser_plugin.parsers.utils.utils import (
 from nomad_oasis_schema_parser_plugin.schema_packages.eln_metadata import (
     CCPNCMetadataELN,
 )
+from nomad_oasis_schema_parser_plugin.schema_packages.metadata_sync_utilities import (
+    create_ccpnc_metadata_from_dict,
+)
 from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
     ORCID,
     CCPNCMetadata,
@@ -163,91 +166,22 @@ class CCPNCMagresParser(MagresParser):
             return None
 
     def populate_metadata_from_dict(
-        self,
-        metadata_dict: dict,
-        calculation_params: dict,
-        logger: "BoundLogger"
+        self, metadata_dict: dict, calculation_params: dict, logger: 'BoundLogger'
     ) -> CCPNCMetadata:
         """Populate CCPNCMetadata from a dictionary (from JSON or CSV).
-        
+
         Args:
             metadata_dict: Dictionary containing metadata
             calculation_params: Calculation parameters from magres file
             logger: Logger instance
-            
+
         Returns:
             CCPNCMetadata object
         """
-        def get_value_or_none(data, key, default=None):
-            """Get value from dict, converting empty strings to None"""
-            value = data.get(key, default)
-            if isinstance(value, str) and value.strip() == '':
-                return None
-            return value
-        
-        ccpnc_metadata = CCPNCMetadata()
-        material_properties = MaterialProperties()
-        orcid = ORCID()
-        ccpnc_record = CCPNCRecord()
-        external_database_reference = ExternalDatabaseReference()
-        free_text_metadata = FreeTextMetadata()
-        publication_record = PublicationRecord()
-        
-        # Parse material properties
-        material_properties.chemical_name = get_value_or_none(metadata_dict, "chemname")
-        material_properties.formula = get_value_or_none(metadata_dict, "formula")
-        material_properties.stoichiometry = get_value_or_none(
-            metadata_dict, "stochiometry"
-        )
-        material_properties.elements_ratios = get_value_or_none(
-            metadata_dict, "elements_ratios"
-        )
 
-        # Parse ORCID
-        orcid.orcid_id = get_value_or_none(metadata_dict, "ORCID")
-
-        # Parse CCPNC record
-        ccpnc_record.immutable_id = get_value_or_none(metadata_dict, "immutable_id")
-        
-        # Parse version metadata
-        version_metadata = metadata_dict.get("version_metadata", {})
-        ccpnc_record.license = get_value_or_none(version_metadata, "license")
-        external_database_reference.external_database_name = get_value_or_none(
-            version_metadata, "extref_type"
+        return create_ccpnc_metadata_from_dict(
+            metadata_dict, calculation_params, logger
         )
-        external_database_reference.external_database_reference_code = (
-            get_value_or_none(version_metadata, "extref_code")
-        )
-        free_text_metadata.uploader_author_notes = get_value_or_none(
-            version_metadata, "notes"
-        )
-        free_text_metadata.structural_descriptor_notes = get_value_or_none(
-            version_metadata, "chemform"
-        )
-        
-        # Parse publication record
-        publication_record.doi = get_value_or_none(
-            version_metadata, "doi"
-        )
-        
-        # Add magres_calc from calculation_params if not in metadata_dict
-        if 'magres_calc' not in version_metadata and calculation_params:
-            version_metadata['magres_calc'] = {
-                'calc_code': calculation_params.get('code', ''),
-                'calc_code_version': calculation_params.get('code_version', ''),
-                'calc_xcfunctional': calculation_params.get('functional', ''),
-            }
-        
-        # Assemble the metadata
-        ccpnc_metadata.material_properties = material_properties
-        ccpnc_metadata.orcid = orcid
-        ccpnc_metadata.ccpnc_record = ccpnc_record
-        ccpnc_metadata.external_database_reference = external_database_reference
-        ccpnc_metadata.free_text_metadata = free_text_metadata
-        ccpnc_metadata.publication_record = publication_record
-        
-        logger.info("Successfully created CCPNCMetadata object")
-        return ccpnc_metadata
 
     def create_metadata_eln(
         self,
@@ -260,6 +194,9 @@ class CCPNCMagresParser(MagresParser):
         try:
             # Create the ELN with initialized CCPNC metadata subsection
             eln_entry = CCPNCMetadataELN()
+            # Store reference to the main magres file
+            eln_entry.main_entry = self.basename
+            logger.info(f'Creating ELN for main entry: {self.basename}')
 
         except Exception as e:
             logger.error(f"Metadata object creation failed: {e}")
@@ -278,8 +215,77 @@ class CCPNCMagresParser(MagresParser):
             )
             return reference
         except Exception as e:
-            logger.error(f"Failed to create metadata ELN: {e}")
+            logger.error(f'Failed to create metadata ELN: {e}')
             import traceback
+
+            logger.error(traceback.format_exc())
+            return None
+
+    def parse_eln_metadata(self, filepath: str, logger: 'BoundLogger') -> dict | None:
+        """
+        Parse metadata from an existing ELN archive.
+
+        Args:
+            filepath: Path to the magres file (used to locate ELN)
+            logger: Logger instance
+
+        Returns:
+            Dictionary with metadata, or None if ELN not found
+        """
+        # Look for metadata.archive.json file in the same directory
+        eln_files = get_files(
+            pattern='metadata.archive.json',
+            filepath=filepath,
+            stripname=self.basename,
+            deep=False,  # Only check same directory as mainfile
+        )
+
+        if not eln_files:
+            return None
+
+        eln_file_path = eln_files[0]
+
+        try:
+            import json
+
+            with open(eln_file_path) as f:
+                eln_data = json.load(f)
+
+            # Extract the data section
+            data_section = eln_data.get('data', {})
+
+            # Check if this ELN is for this magres file
+            if data_section.get('main_entry') != self.basename:
+                logger.warning(
+                    f"ELN main_entry '{data_section.get('main_entry')}' "
+                    f"doesn't match current file '{self.basename}'"
+                )
+                return None
+
+            # Build metadata dict from ELN data
+            metadata_dict = {
+                'chemname': data_section.get('chemical_name'),
+                'ORCID': data_section.get('orcid_id'),
+            }
+
+            # Version metadata from ELN
+            version_metadata = {
+                'license': data_section.get('license'),
+                'extref_type': data_section.get('external_database_name'),
+                'extref_code': data_section.get('external_database_reference_code'),
+                'notes': data_section.get('uploader_author_notes'),
+                'chemform': data_section.get('structural_descriptor_notes'),
+                'doi': data_section.get('doi'),
+            }
+            metadata_dict['version_metadata'] = version_metadata
+
+            logger.info(f'Successfully loaded metadata from ELN: {eln_file_path}')
+            return metadata_dict
+
+        except Exception as e:
+            logger.error(f'Failed to parse ELN metadata from {eln_file_path}: {e}')
+            import traceback
+
             logger.error(traceback.format_exc())
             return None
 
@@ -591,42 +597,56 @@ class CCPNCMagresParser(MagresParser):
         archive._ccpnc_calculation_params = calculation_params
 
     def _parse_and_attach_metadata(
-        self,
-        simulation,
-        calculation_params,
-        archive,
-        logger):
+        self, simulation, calculation_params, archive, logger
+    ):
         ccpnc_metadata = None
         metadata_source = None
 
-        json_metadata = self.parse_json_file(filepath=self.mainfile, logger=logger)
-        if json_metadata:
-            ccpnc_metadata = json_metadata
-            metadata_source = 'json'
-        else:
+        # First, check if there's an existing ELN with metadata
+        eln_metadata_dict = self.parse_eln_metadata(
+            filepath=self.mainfile, logger=logger
+        )
+        if eln_metadata_dict:
+            ccpnc_metadata = self.populate_metadata_from_dict(
+                metadata_dict=eln_metadata_dict,
+                calculation_params=calculation_params,
+                logger=logger,
+            )
+            metadata_source = 'eln'
+            logger.info('Using metadata from existing ELN entry')
+
+        # If no ELN, check for JSON file
+        if not ccpnc_metadata:
+            json_metadata = self.parse_json_file(filepath=self.mainfile, logger=logger)
+            if json_metadata:
+                ccpnc_metadata = json_metadata
+                metadata_source = 'json'
+
+        # If no JSON, check for CSV file
+        if not ccpnc_metadata:
             metadata_dict = self.parse_csv_metadata(
-                filepath=self.mainfile,
-                target_filename=self.basename,
-                logger=logger
+                filepath=self.mainfile, target_filename=self.basename, logger=logger
             )
             if metadata_dict:
                 ccpnc_metadata = self.populate_metadata_from_dict(
                     metadata_dict=metadata_dict,
                     calculation_params=calculation_params,
-                    logger=logger
+                    logger=logger,
                 )
                 metadata_source = 'csv'
 
+        # Attach metadata if found from any source
         if ccpnc_metadata:
             simulation.ccpnc_metadata = ccpnc_metadata
 
+        # Only create ELN if no metadata was found from any source
         if metadata_source is None:
             metadata_reference = self.create_metadata_eln(
                 archive=archive, logger=logger
             )
             if metadata_reference:
                 simulation.metadata_eln_reference = metadata_reference
-    
+
     def parse(
         self,
         filepath: str,

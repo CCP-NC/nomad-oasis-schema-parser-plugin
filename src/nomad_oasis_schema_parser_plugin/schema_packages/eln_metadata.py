@@ -133,8 +133,49 @@ class CCPNCMetadataELN(EntryData):
         ),
         a_eln=ELNAnnotation(
             component=ELNComponentEnum.StringEditQuantity,
-            label='Author\'s Notes',
+            label="Author's Notes",
         ),
     )
+
+    def normalize(self, archive, logger):
+        if getattr(self, 'trigger_update_main_metadata', False):
+            try:
+                # Check if main_entry reference is set
+                if not self.main_entry:
+                    logger.error(
+                        'Main entry reference is not set. Cannot update metadata.'
+                    )
+                    self.trigger_update_main_metadata = False
+                    return
+
+                # Verify the upload context is available
+                if not hasattr(archive.m_context, 'process_updated_raw_file'):
+                    logger.error(
+                        'Cannot trigger reprocessing - manually reprocess to update '
+                        'metadata in mainfile.'
+                    )
+                    self.trigger_update_main_metadata = False
+                    return
+
+                # Trigger automatic reprocessing of the main entry
+                # The parser will read metadata from this ELN during reprocessing
+                try:
+                    archive.m_context.process_updated_raw_file(
+                        self.main_entry, allow_modify=True
+                    )
+                except Exception as proc_error:
+                    logger.error(
+                        f'Failed to trigger reprocessing: {proc_error}: '
+                        f'Please manually reprocess the main entry to apply changes'
+                    )
+
+            except Exception as e:
+                logger.error(f'Failed to update main metadata: {e}')
+                import traceback
+
+                logger.error(traceback.format_exc())
+            finally:
+                self.trigger_update_main_metadata = False  # Reset after action
+
 
 m_package.__init_metainfo__()
