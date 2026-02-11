@@ -10,15 +10,15 @@ from glob import glob
 
 def get_files(pattern: str, filepath: str, stripname: str = '', deep: bool = True):
     """Get files following the `pattern` with respect to the file `stripname` (usually
-    this being the mainfile of the given parser) up to / down from the `filepath` 
+    this being the mainfile of the given parser) up to / down from the `filepath`
     (`deep=True` going down, `deep=False` up)
 
     Args:
         pattern (str): targeted pattern to be found
         filepath (str): filepath to start the search
-        stripname (str, optional): name with respect to which do the search. Defaults 
+        stripname (str, optional): name with respect to which do the search. Defaults
         to ''.
-        deep (bool, optional): boolean setting the path in the folders to scan (down or 
+        deep (bool, optional): boolean setting the path in the folders to scan (down or
         up). Defaults to down=True.
 
     Returns:
@@ -39,6 +39,7 @@ def get_files(pattern: str, filepath: str, stripname: str = '', deep: bool = Tru
     filenames = [f for f in filenames if os.access(f, os.F_OK)]
     return filenames
 
+
 def get_reference(upload_id: str, entry_id: str) -> str:
     """Create a reference path to another entry in the same upload."""
     return f'../uploads/{upload_id}/archive/{entry_id}#data'
@@ -47,7 +48,9 @@ def get_reference(upload_id: str, entry_id: str) -> str:
 def get_entry_id_from_file_name(file_name: str, archive: 'EntryArchive') -> str:
     """Generate entry ID from filename using NOMAD's hash function."""
     from nomad.utils import hash
+
     return hash(archive.metadata.upload_id, file_name)
+
 
 def create_archive(
     entity: 'ArchiveSection',
@@ -56,7 +59,7 @@ def create_archive(
     overwrite: bool = False,
 ) -> str:
     """
-    Create a child archive file (.archive.json) that will be processed as a separate 
+    Create a child archive file (.archive.json) that will be processed as a separate
     entry.
 
     Args:
@@ -75,6 +78,5 @@ def create_archive(
             entry['data'] = entity.m_to_dict(with_root_def=True)
 
     return get_reference(
-        archive.metadata.upload_id, 
-        get_entry_id_from_file_name(file_name, archive)
+        archive.metadata.upload_id, get_entry_id_from_file_name(file_name, archive)
     )

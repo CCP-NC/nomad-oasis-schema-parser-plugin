@@ -25,10 +25,8 @@ configuration = config.get_plugin_entry_point(
 
 m_package = SchemaPackage()
 
+
 class MaterialProperties(ArchiveSection):
-    # Note from @JosePizarro3: note we have all these information somewhere else in the 
-    # `nomad_simulations` schema. Nevertheless, if you feel it is better to keep these 
-    # quantities here for clarity, it is totally fine for me.
     chemical_name = Quantity(
         type=str,
         description="""
@@ -71,6 +69,7 @@ class MaterialProperties(ArchiveSection):
         Ratio of constituent elements (each element is a number between 0 and 1).
         """,
     )
+
 
 class PublicationRecord(ArchiveSection):
     doi = Quantity(
@@ -155,6 +154,7 @@ class FreeTextMetadata(ArchiveSection):
         """,
     )
 
+
 class CCPNC_VoilaNotebook(MetadataVoilaNotebook, EntryData):
     # m_def = Section(a_eln=dict(hide=['lab_id']))
 
@@ -170,382 +170,389 @@ class CCPNCMetadata(ArchiveSection):
     free_text_metadata = SubSection(section_def=FreeTextMetadata)
     publication_record = SubSection(section_def=PublicationRecord)
 
+
 # New section for element-resolved magnetic shielding isotropy values
 class ElementIsotropyEntry(ArchiveSection):
-    element = Quantity(
-        type=str,
-        description="Element symbol, e.g. 'H', 'C', 'O'."
-    )
+    element = Quantity(type=str, description="Element symbol, e.g. 'H', 'C', 'O'.")
     isotropy = Quantity(
-        type=float,
-        description="Shielding isotropy value for an atomic site."
+        type=float, description='Shielding isotropy value for an atomic site.'
     )
+
 
 # New section for element-resolved electric field gradient Vzz values
 class ElementVzzEntry(ArchiveSection):
-    element = Quantity(
-        type=str,
-        description="Element symbol, e.g. 'H', 'C', 'O'."
-    )
+    element = Quantity(type=str, description="Element symbol, e.g. 'H', 'C', 'O'.")
     Vzz = Quantity(
-        type=float,
-        description="Electric field gradient Vzz value for an atomic site."
+        type=float, description='Electric field gradient Vzz value for an atomic site.'
     )
+
 
 class IsotropyEntry(ArchiveSection):
     isotropy = Quantity(
-        type=float, description="Shielding isotropy value for any element")
+        type=float, description='Shielding isotropy value for any element'
+    )
+
 
 class VzzEntry(ArchiveSection):
     Vzz = Quantity(
-        type=float, description="Electric field gradient Vzz value for any element",
+        type=float,
+        description='Electric field gradient Vzz value for any element',
         a_elasticsearch=Elasticsearch(  # Add this annotation
             metrics={'min': 'min', 'max': 'max'}  # Enables min/max aggregations
-        ))
+        ),
+    )
+
 
 class ElementResolvedMagneticShielding(ArchiveSection):
     element_isotropy_list = SubSection(
-        section_def=ElementIsotropyEntry, repeats=True,
-        description="List of element/isotropy entries."
+        section_def=ElementIsotropyEntry,
+        repeats=True,
+        description='List of element/isotropy entries.',
     )
     Al_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Al"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Al',
     )
     B_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for B"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for B',
     )
     Ba_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Ba"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Ba',
     )
     Bi_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Bi"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Bi',
     )
     Br_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Br"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Br',
     )
     C_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for C"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for C',
     )
     Cd_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Cd"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Cd',
     )
     Cl_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Cl"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Cl',
     )
     Cr_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Cr"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Cr',
     )
     Cs_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Cs"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Cs',
     )
     Cu_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Cu"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Cu',
     )
     F_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for F"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for F',
     )
     Fe_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Fe"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Fe',
     )
     Ga_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Ga"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Ga',
     )
     H_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for H"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for H',
     )
     Hf_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Hf"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Hf',
     )
     I_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for I"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for I',
     )
     In_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for In"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for In',
     )
     La_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for La"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for La',
     )
     Li_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Li"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Li',
     )
     Mg_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Mg"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Mg',
     )
     N_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for N"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for N',
     )
     Na_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Na"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Na',
     )
     O_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for O"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for O',
     )
     P_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for P"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for P',
     )
     S_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for S"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for S',
     )
     Sb_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Sb"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Sb',
     )
     Sc_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Sc"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Sc',
     )
     Se_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Se"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Se',
     )
     Si_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Si"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Si',
     )
     Sn_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Sn"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Sn',
     )
     Sr_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Sr"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Sr',
     )
     Ta_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Ta"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Ta',
     )
     Te_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Te"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Te',
     )
     Ti_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Ti"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Ti',
     )
     V_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for V"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for V',
     )
     Y_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Y"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Y',
     )
     Zn_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Zn"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Zn',
     )
     Zr_isotropy_list = SubSection(
-        section_def=IsotropyEntry, repeats=True,
-        description="List of shielding isotropy values for Zr"
+        section_def=IsotropyEntry,
+        repeats=True,
+        description='List of shielding isotropy values for Zr',
     )
+
 
 class ElementResolvedElectricFieldGradient(ArchiveSection):
     element_vzz_list = SubSection(
-        section_def=ElementVzzEntry, repeats=True,
-        description="List of element/vzz entries."
+        section_def=ElementVzzEntry,
+        repeats=True,
+        description='List of element/vzz entries.',
     )
     Al_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Al"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Al'
     )
     B_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for B"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for B'
     )
     Ba_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Ba"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Ba'
     )
     Bi_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Bi"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Bi'
     )
     Br_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Br"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Br'
     )
     C_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for C"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for C'
     )
     Cd_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Cd"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Cd'
     )
     Cl_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Cl"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Cl'
     )
     Cr_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Cr"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Cr'
     )
     Cs_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Cs"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Cs'
     )
     Cu_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Cu"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Cu'
     )
     F_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for F"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for F'
     )
     Fe_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Fe"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Fe'
     )
     Ga_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Ga"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Ga'
     )
     H_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for H"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for H'
     )
     Hf_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Hf"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Hf'
     )
     I_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for I"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for I'
     )
     In_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for In"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for In'
     )
     La_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for La"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for La'
     )
     Li_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Li"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Li'
     )
     Mg_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Mg"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Mg'
     )
     N_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for N"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for N'
     )
     Na_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Na"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Na'
     )
     O_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for O"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for O'
     )
     P_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for P"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for P'
     )
     S_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for S"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for S'
     )
     Sb_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Sb"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Sb'
     )
     Sc_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Sc"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Sc'
     )
     Se_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Se"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Se'
     )
     Si_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Si"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Si'
     )
     Sn_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Sn"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Sn'
     )
     Sr_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Sr"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Sr'
     )
     Ta_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Ta"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Ta'
     )
     Te_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Te"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Te'
     )
     Ti_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Ti"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Ti'
     )
     V_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for V"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for V'
     )
     Y_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Y"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Y'
     )
     Zn_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Zn"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Zn'
     )
     Zr_vzz_list = SubSection(
-        section_def=VzzEntry, repeats=True,
-        description="List of EFG Vzz values for Zr"
+        section_def=VzzEntry, repeats=True, description='List of EFG Vzz values for Zr'
     )
+
 
 class ElementResolvedNMRSearch(ArchiveSection):
     element_resolved_magnetic_shielding = SubSection(
-        section_def=ElementResolvedMagneticShielding)
+        section_def=ElementResolvedMagneticShielding
+    )
 
     element_resolved_electric_field_gradient = SubSection(
-        section_def=ElementResolvedElectricFieldGradient)
+        section_def=ElementResolvedElectricFieldGradient
+    )
+
 
 # Define the CCPNCSimulation class holding CCP-NC specific metadata
 class CCPNCSimulation(Simulation):
     ccpnc_metadata = SubSection(section_def=CCPNCMetadata)
 
     # New subsection for element-resolved magnetic shielding
-    element_resolved_nmr_search = SubSection(
-        section_def=ElementResolvedNMRSearch)
+    element_resolved_nmr_search = SubSection(section_def=ElementResolvedNMRSearch)
 
     # Add reference to the metadata ELN entry
     metadata_eln_reference = Quantity(
         type=Reference(CCPNCMetadataELN.m_def),
         description='Reference to the external metadata ELN entry',
     )
+
 
 m_package.__init_metainfo__()

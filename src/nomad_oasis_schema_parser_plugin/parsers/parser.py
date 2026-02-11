@@ -57,13 +57,7 @@ from nomad_oasis_schema_parser_plugin.schema_packages.metadata_sync_utilities im
     create_ccpnc_metadata_from_dict,
 )
 from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
-    ORCID,
     CCPNCMetadata,
-    CCPNCRecord,
-    ExternalDatabaseReference,
-    FreeTextMetadata,
-    MaterialProperties,
-    PublicationRecord,
 )
 from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
     CCPNCSimulation as Simulation,
@@ -97,18 +91,15 @@ class CCPNCMagresParser(MagresParser):
         self.magres_outputs_class = NMROutputs
 
     def parse_csv_metadata(
-        self,
-        filepath: str,
-        target_filename: str,
-        logger: "BoundLogger"
+        self, filepath: str, target_filename: str, logger: 'BoundLogger'
     ) -> dict | None:
         """Parse CSV file to extract metadata for a specific magres file.
-    
+
         Args:
             filepath: Path to the magres file (used to locate CSV)
             target_filename: The filename to look for in CSV (e.g., 'ethanol.magres')
             logger: Logger instance
-        
+
         Returns:
             Dictionary with metadata matching JSON structure, or None if not found
         """
@@ -117,11 +108,11 @@ class CCPNCMagresParser(MagresParser):
             pattern='metadata_info.csv',
             filepath=filepath,
             stripname=self.basename,
-            deep=True
+            deep=True,
         )
 
         if not csv_files:
-            logger.info("No CSV metadata file found")
+            logger.info('No CSV metadata file found')
             return None
 
         csv_file_path = csv_files[0]
@@ -129,7 +120,7 @@ class CCPNCMagresParser(MagresParser):
         try:
             with open(csv_file_path, encoding='utf-8') as f:
                 csv_reader = csv.DictReader(f)
-                
+
                 # Find the row matching magres filename
                 for row in csv_reader:
                     if row.get('filename', '').strip() == target_filename:
@@ -140,7 +131,7 @@ class CCPNCMagresParser(MagresParser):
                                 return None
                             cleaned = value.strip()
                             return None if cleaned == '' else cleaned
-                        
+
                         # Construct metadata dict matching JSON structure
                         metadata_dict = {
                             'chemname': clean_value(row.get('chemname')),
@@ -153,16 +144,16 @@ class CCPNCMagresParser(MagresParser):
                                 'extref_other': clean_value(row.get('extref_other')),
                                 'chemform': clean_value(row.get('chemform')),
                                 'notes': clean_value(row.get('notes')),
-                            }
+                            },
                         }
-                        
+
                         return metadata_dict
-                
-                logger.warning(f"No entry found for {target_filename} in CSV file")
+
+                logger.warning(f'No entry found for {target_filename} in CSV file')
                 return None
-                
+
         except Exception as e:
-            logger.error(f"Failed to read or parse CSV file {csv_file_path}: {e}")
+            logger.error(f'Failed to read or parse CSV file {csv_file_path}: {e}')
             return None
 
     def populate_metadata_from_dict(
@@ -186,7 +177,7 @@ class CCPNCMagresParser(MagresParser):
     def create_metadata_eln(
         self,
         archive: 'EntryArchive',
-        logger: "BoundLogger",
+        logger: 'BoundLogger',
     ) -> None:
         """
         Create a separate metadata.archive.json ELN entry if no metadata files exist.
@@ -199,8 +190,9 @@ class CCPNCMagresParser(MagresParser):
             logger.info(f'Creating ELN for main entry: {self.basename}')
 
         except Exception as e:
-            logger.error(f"Metadata object creation failed: {e}")
+            logger.error(f'Metadata object creation failed: {e}')
             import traceback
+
             logger.error(traceback.format_exc())
             return None
 
@@ -290,35 +282,33 @@ class CCPNCMagresParser(MagresParser):
             return None
 
     def parse_json_file(
-        self, filepath: str, logger: "BoundLogger"
+        self, filepath: str, logger: 'BoundLogger'
     ) -> CCPNCMetadata | None:
-        """Parse the JSON file and extract relevant information with exact 
+        """Parse the JSON file and extract relevant information with exact
         filename matching."""
         # Extract the base filename without extension
         base_filename = os.path.splitext(self.basename)[0]
-        expected_json_filename = f"{base_filename}.json"
-    
+        expected_json_filename = f'{base_filename}.json'
+
         logger.info(
             f"Looking for exact matching JSON file '{expected_json_filename}' "
-            f"for magres file: {filepath}"
+            f'for magres file: {filepath}'
         )
-    
+
         # First try exact filename matching
         magres_json_file = get_files(
-            pattern=expected_json_filename, 
-            filepath=filepath, 
-            stripname=self.basename
+            pattern=expected_json_filename, filepath=filepath, stripname=self.basename
         )
 
         if not magres_json_file:
             logger.warning(
-                "No JSON file found. If you have added a JSON file, please name it the "
-                "same as its magres file."
+                'No JSON file found. If you have added a JSON file, please name it the '
+                'same as its magres file.'
             )
             return None
-        
+
         json_file_path = magres_json_file[0]
-        logger.info(f"Found JSON file: {json_file_path}")
+        logger.info(f'Found JSON file: {json_file_path}')
 
         try:
             with open(json_file_path) as f:
@@ -328,27 +318,27 @@ class CCPNCMagresParser(MagresParser):
             return self.populate_metadata_from_dict(
                 metadata_dict=magres_json_data,
                 calculation_params=None,  # JSON already has all data
-                logger=logger
+                logger=logger,
             )
 
         except (OSError, json.JSONDecodeError) as e:
-            logger.error(f"Failed to read or parse JSON file {json_file_path}: {e}")
+            logger.error(f'Failed to read or parse JSON file {json_file_path}: {e}')
             return None
 
     def parse_outputs_with_nmr_schema(
         self,
         simulation: Simulation,
-        logger: "BoundLogger",
+        logger: 'BoundLogger',
     ) -> NMROutputs | None:
         """
-        Parse the NMR outputs section using the NMR schema, focusing on magnetic 
+        Parse the NMR outputs section using the NMR schema, focusing on magnetic
         shielding.
         This method combines the original magres parsing with the NMR schema.
         """
         # Initial validation
         if not self._validate_simulation_data(simulation, logger):
             return None
-        
+
         # Get validated data
         model_system = simulation.model_system[-1]
         magres_data = self.magres_file_parser.get('magres')
@@ -363,16 +353,14 @@ class CCPNCMagresParser(MagresParser):
             ),
             model_system_ref=model_system,
         )
-        
+
         # Parse all NMR quantities
         self._parse_all_nmr_quantities(outputs, magres_data, model_system, logger)
-        
+
         return outputs
 
     def _validate_simulation_data(
-        self, 
-        simulation: Simulation, 
-        logger: "BoundLogger"
+        self, simulation: Simulation, logger: 'BoundLogger'
     ) -> bool:
         """Validate that simulation has the required model_system data."""
         if simulation.model_system is None or len(simulation.model_system) == 0:
@@ -387,7 +375,7 @@ class CCPNCMagresParser(MagresParser):
         outputs: NMROutputs,
         magres_data: dict,
         model_system,
-        logger: "BoundLogger",
+        logger: 'BoundLogger',
     ) -> None:
         """Parse all NMR quantities and assign them to outputs."""
         cell = model_system.cell[-1]
@@ -401,7 +389,7 @@ class CCPNCMagresParser(MagresParser):
             'model_system': model_system,
             'logger': logger,
         }
-        
+
         # Define parsing configurations
         nmr_parsers = [
             {
@@ -447,11 +435,11 @@ class CCPNCMagresParser(MagresParser):
                 'requires_filtering': True,
             },
         ]
-        
+
         # Parse standard NMR quantities
         for parser_config in nmr_parsers:
             self._parse_single_nmr_quantity(outputs, parser_context, parser_config)
-        
+
         # Parse magnetic susceptibilities (different signature)
         self._parse_magnetic_susceptibilities(outputs, magres_data, logger)
 
@@ -463,7 +451,7 @@ class CCPNCMagresParser(MagresParser):
     ) -> None:
         """Parse a single NMR quantity based on configuration."""
         method = getattr(self, config['method'])
-        
+
         # Call the parser method
         results = method(
             magres_data=parser_context['magres_data'],
@@ -472,38 +460,34 @@ class CCPNCMagresParser(MagresParser):
             model_system=parser_context['model_system'],
             logger=parser_context['logger'],
         )
-        
+
         # Filter results if needed
         if config['requires_filtering'] and results:
             results = [item for item in results if item is not None]
-        
+
         # Assign results to outputs
         if results and len(results) > 0:
             setattr(outputs, config['output_attr'], results)
         else:
-            parser_context['logger'].info(f"No {config['log_name']} data found")
+            parser_context['logger'].info(f'No {config["log_name"]} data found')
 
     def _parse_magnetic_susceptibilities(
         self,
         outputs: NMROutputs,
         magres_data: dict,
-        logger: "BoundLogger",
+        logger: 'BoundLogger',
     ) -> None:
         """Parse magnetic susceptibilities (different method signature)."""
         mag_sus = self.parse_magnetic_susceptibilities(
-            magres_data=magres_data, 
-            logger=logger
+            magres_data=magres_data, logger=logger
         )
-        
+
         if len(mag_sus) > 0:
             outputs.magnetic_susceptibilities = mag_sus
         else:
-            logger.info("No magnetic susceptibility data found")
+            logger.info('No magnetic susceptibility data found')
 
-    def parse_system_old(
-        self,
-        logger: 'BoundLogger',
-        sec_run: OldRun):
+    def parse_system_old(self, logger: 'BoundLogger', sec_run: OldRun):
         """
         Testing old run for preparing atoms for crystal structure viewing
         """
@@ -512,15 +496,15 @@ class CCPNCMagresParser(MagresParser):
 
         atoms_old = self.magres_file_parser.get('atoms', [])
         if not atoms_old:
-            logger.error("Parse error - No atoms found in atoms object")
+            logger.error('Parse error - No atoms found in atoms object')
             return None
 
         # Store lattice_vectors and periodic boundary conditions
         lattice_vectors_old = np.reshape(np.array(atoms_old.get('lattice', [])), (3, 3))
         sec_atoms.lattice_vectors = lattice_vectors_old * ureg.angstrom
         pbc = (
-            [True, True, True] 
-            if lattice_vectors_old is not None 
+            [True, True, True]
+            if lattice_vectors_old is not None
             else [False, False, False]
         )
         sec_atoms.periodic = pbc
@@ -528,7 +512,7 @@ class CCPNCMagresParser(MagresParser):
         # Storing atom positions and labels
         atoms_list = atoms_old.get('atom', [])
         if len(atoms_list) == 0:
-            logger.error("No atom lists found in atoms object")
+            logger.error('No atom lists found in atoms object')
             return None
         atom_labels = []
         atom_positions = []
@@ -541,20 +525,17 @@ class CCPNCMagresParser(MagresParser):
         # Add species (atomic numbers) based on labels
         try:
             sec_atoms.species = [
-                ase.data.atomic_numbers.get(label, 0) for label in atom_labels]
+                ase.data.atomic_numbers.get(label, 0) for label in atom_labels
+            ]
         except Exception as e:
-            logger.error(f"Failed to assign species (atomic numbers) to atoms: {e}")
+            logger.error(f'Failed to assign species (atomic numbers) to atoms: {e}')
 
         sec_system.atoms = sec_atoms
         sec_run.system.append(sec_system)
 
     def _prepare_sample_and_sec_run(
-        self,
-        simulation,
-        archive,
-        logger,
-        program_name,
-        program_version):
+        self, simulation, archive, logger, program_name, program_version
+    ):
         # Create a sample class to populate results using normalizer
         class CCPNCSample:
             def __init__(self):
@@ -658,7 +639,7 @@ class CCPNCMagresParser(MagresParser):
         self.maindir = os.path.dirname(self.mainfile)
         self.basename = os.path.basename(self.mainfile)
         self.archive = archive
-  
+
         # Initialize the magres file parser (from parent class)
         self.init_parser(logger=logger)
         self._check_units_magres(logger=logger)
@@ -685,7 +666,8 @@ class CCPNCMagresParser(MagresParser):
         if not is_supported:
             logger.error(
                 'Only CASTEP and QE-GIPAW based NMR simulations are currently supported'
-                'by the CCPNC magres parser. Found calc_code: "%s"', code
+                'by the CCPNC magres parser. Found calc_code: "%s"',
+                code,
             )
             return
 
@@ -695,7 +677,7 @@ class CCPNCMagresParser(MagresParser):
 
         # Parse program information
         # Note: Older QE-GIPAW generated magres files may have limited metadata in the
-        # calculation block, (e.g., calc_code_version='git'). The parser attempts to 
+        # calculation block, (e.g., calc_code_version='git'). The parser attempts to
         # extract version from calc_code field when necessary.
         program_name, program_version = self._parse_program_info(
             calculation_params, logger
@@ -709,9 +691,10 @@ class CCPNCMagresParser(MagresParser):
         if model_system is not None:
             simulation.model_system.append(model_system)
             self._prepare_sample_and_sec_run(
-                simulation, archive, logger, program_name, program_version)   
+                simulation, archive, logger, program_name, program_version
+            )
         else:
-            logger.error("Could not parse model system from magres file")
+            logger.error('Could not parse model system from magres file')
 
         # Parse model method (from parent class)
         model_method = self.parse_model_method(calculation_params=calculation_params)
@@ -726,7 +709,7 @@ class CCPNCMagresParser(MagresParser):
         if outputs is not None:
             simulation.outputs.append(outputs)
         else:
-            logger.error("Could not parse NMR outputs")
+            logger.error('Could not parse NMR outputs')
 
         self._parse_and_attach_metadata(simulation, calculation_params, archive, logger)
 

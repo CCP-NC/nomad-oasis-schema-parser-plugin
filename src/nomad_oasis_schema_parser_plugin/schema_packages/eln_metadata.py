@@ -20,21 +20,41 @@ class CCPNCMetadataELN(EntryData):
     ELN entry for CCPNC metadata input.
     All fields are at the top level for easy data entry.
     """
-    
+
     m_def = Section(
         label='CCPNC Metadata Entry',
     )
-    
+
+    # Reference to the main Magres entry
+    main_entry = Quantity(
+        type=str,
+        description='Reference to the main Magres entry (entry_id or filename)',
+        a_eln=ELNAnnotation(
+            component=ELNComponentEnum.StringEditQuantity,
+            label='Main Magres Entry',
+        ),
+    )
+
+    trigger_update_main_metadata = Quantity(
+        type=bool,
+        default=False,
+        description='Sync metadata to Magres entry',
+        a_eln=ELNAnnotation(
+            component=ELNComponentEnum.ActionEditQuantity,
+            label='Sync metadata to Magres entry',
+        ),
+    )
+
     # ORCID field
     orcid_id = Quantity(
         type=str,
         description='ORCID identifier for the author',
         a_eln=ELNAnnotation(
             component=ELNComponentEnum.StringEditQuantity,
-            label='Author\'s ORCID ID',
+            label="Author's ORCID ID",
         ),
     )
-    
+
     # Material Properties field
     chemical_name = Quantity(
         type=str,
@@ -47,11 +67,13 @@ class CCPNCMetadataELN(EntryData):
 
     # Publication license field - DROP-DOWN
     license = Quantity(
-        type=MEnum([
-            'PDDL v1.0',
-            'ODC BY v1.0',
-            'CC BY 4.0',
-        ]),
+        type=MEnum(
+            [
+                'PDDL v1.0',
+                'ODC BY v1.0',
+                'CC BY 4.0',
+            ]
+        ),
         description='License under which the record is released.',
         a_eln=ELNAnnotation(
             component=ELNComponentEnum.EnumEditQuantity,
@@ -72,13 +94,15 @@ class CCPNCMetadataELN(EntryData):
     # External Database Reference fields
     # Database name - DROP-DOWN
     external_database_name = Quantity(
-        type=MEnum([
-            'csd',
-            'icsd',
-            'cod',
-            'other',
-            'n/a',
-        ]),
+        type=MEnum(
+            [
+                'csd',
+                'icsd',
+                'cod',
+                'other',
+                'n/a',
+            ]
+        ),
         description=(
             'External database name where additional information on the material exists'
         ),
