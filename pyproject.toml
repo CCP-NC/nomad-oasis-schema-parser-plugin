@@ -7,7 +7,6 @@ classifiers = [
     "Intended Audience :: Developers",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: MIT License",
@@ -16,7 +15,7 @@ name = "nomad-oasis-schema-parser-plugin"
 description = "Specialised magres parser + custom schema package for the CCP-NC NOMAD Oasis."
 version = "0.1.0"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name = "Sathya Sai Seetharaman", email = "sathya-sai.seetharaman@stfc.ac.uk" },
 ]
