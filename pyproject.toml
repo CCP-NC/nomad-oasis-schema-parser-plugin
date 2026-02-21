@@ -30,11 +30,13 @@ dependencies = [
     #TODO: revert back to central nomad-lab when EFG units are included.
     "nomad-lab @ git+https://github.com/CCP-NC/nomad-FAIR-nmr-units-patch.git@main",
     "python-magic-bin; sys_platform == 'win32'",
-    "nomad-parser-plugins-electronic>=1.0",
+    # Patched version of nomad-parser-plugins-electronic
+    # TODO: remove when reverting nomad-lab to central version
+    "nomad-parser-plugins-electronic @ git+https://github.com/CCP-NC/nomad-parser-plugins-electronic-patch.git@main",
     "nomad-schema-plugin-run>=1.0.1",
     "nomad-parser-plugins-atomistic>=1.0.6",
-    "nomad-parser-magres @ git+https://github.com/FAIRmat-NFDI/nomad-parser-magres.git@773eadd95180b2aa54ea88ca92522bfdcc992798",
-    "nomad-nmr-schema @ git+https://github.com/FAIRmat-NFDI/nomad-schema-plugin-nmr.git@075496f9fee8d614b4d333ff12b7da2bfddee473"
+    "nomad-parser-magres @ git+https://github.com/FAIRmat-NFDI/nomad-parser-magres.git@94da5149f8b80f8cc7309aad01baf63b855bea54",
+    "nomad-nmr-schema @ git+https://github.com/FAIRmat-NFDI/nomad-schema-plugin-nmr.git@f799401d8981eb9080f18e26d524d8eb7535488e"
 ]
 
 [project.urls]
