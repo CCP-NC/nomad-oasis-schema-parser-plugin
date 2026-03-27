@@ -175,7 +175,10 @@ class CCPNCMetadata(ArchiveSection):
 class ElementIsotropyEntry(ArchiveSection):
     element = Quantity(type=str, description="Element symbol, e.g. 'H', 'C', 'O'.")
     isotropy = Quantity(
-        type=float, description='Shielding isotropy value for an atomic site.'
+        type=float, 
+        unit='ppm',
+        a_eln=dict(defaultDisplayUnit='ppm'),
+        description='Shielding isotropy value for an atomic site.'
     )
 
 
@@ -183,19 +186,25 @@ class ElementIsotropyEntry(ArchiveSection):
 class ElementVzzEntry(ArchiveSection):
     element = Quantity(type=str, description="Element symbol, e.g. 'H', 'C', 'O'.")
     Vzz = Quantity(
-        type=float, description='Electric field gradient Vzz value for an atomic site.'
+        type=float, 
+        unit='a_u_efg',
+        description='Electric field gradient Vzz value for an atomic site.'
     )
 
 
 class IsotropyEntry(ArchiveSection):
     isotropy = Quantity(
-        type=float, description='Shielding isotropy value for any element'
+        type=float, 
+        unit='ppm',
+        a_eln=dict(defaultDisplayUnit='ppm'),
+        description='Shielding isotropy value for any element'
     )
 
 
 class VzzEntry(ArchiveSection):
     Vzz = Quantity(
         type=float,
+        unit='a_u_efg',
         description='Electric field gradient Vzz value for any element',
         a_elasticsearch=Elasticsearch(  # Add this annotation
             metrics={'min': 'min', 'max': 'max'}  # Enables min/max aggregations
