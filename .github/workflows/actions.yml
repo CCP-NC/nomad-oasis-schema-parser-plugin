@@ -16,7 +16,7 @@ jobs:
         uv sync --all-extras
     - name: Test with pytest
       run: |
-        uv run --with coverage coverage run -m pytest -sv --ignore=tests/parsers/test_parser.py
+        uv run --with coverage coverage run -m pytest -sv
     - name: Submit to coveralls
       continue-on-error: true
       env:
