@@ -378,13 +378,11 @@ class CCPNCMagresParser(MagresParser):
         logger: 'BoundLogger',
     ) -> None:
         """Parse all NMR quantities and assign them to outputs."""
-        cell = model_system.cell[-1]
         atom_state_class = AtomsState
 
         # Create parser context
         parser_context = {
             'magres_data': magres_data,
-            'cell': cell,
             'atom_state_class': atom_state_class,
             'model_system': model_system,
             'logger': logger,
@@ -455,7 +453,6 @@ class CCPNCMagresParser(MagresParser):
         # Call the parser method
         results = method(
             magres_data=parser_context['magres_data'],
-            cell=parser_context['cell'],
             atom_state_class=parser_context['atom_state_class'],
             model_system=parser_context['model_system'],
             logger=parser_context['logger'],
