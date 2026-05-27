@@ -529,6 +529,7 @@ class CCPNCNormalizer(Normalizer):
                 description='A representative system from the CCPNC calculation.',
                 system_relation=Relation(type='root'),
                 atoms_ref=atoms_data,
+                dimensionality=dimensionality,
                 # Add composition information
                 elements=elements,
                 chemical_formula_hill=formula_obj.format('hill'),
