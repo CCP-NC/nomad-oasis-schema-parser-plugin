@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 from nomad import atomutils
 from nomad.atomutils import Formula
 from nomad.datamodel import EntryArchive
-from nomad.datamodel.results import DFT as OldModelDFT
 from nomad.datamodel.results import Relation, System
 from nomad.datamodel.results import Simulation as OldModelSimulation
 from nomad.normalizing import Normalizer
