@@ -693,7 +693,7 @@ class CCPNCMagresParser(MagresParser):
             logger.error('Could not parse model system from magres file')
 
         # Parse model method (from parent class)
-        model_method = self.parse_model_method(calculation_params=calculation_params)
+        model_method = self.parse_model_method(calculation_params=calculation_params, logger=logger)
         simulation.model_method.append(model_method)
         self._prepare_measurement_and_params(archive, calculation_params)
 
