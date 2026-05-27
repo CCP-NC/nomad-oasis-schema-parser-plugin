@@ -670,7 +670,6 @@ class CCPNCMagresParser(MagresParser):
 
         # Add XC functional mappings to calculation_params for the normalizer
         calculation_params['_xc_functional_type_map'] = self._xc_functional_type_map
-        calculation_params['_xc_functional_map'] = self._xc_functional_map
 
         # Parse program information
         # Note: Older QE-GIPAW generated magres files may have limited metadata in the
