@@ -607,28 +607,6 @@ class CCPNCNormalizer(Normalizer):
         method.simulation.program_name = program_name
         method.simulation.program_version = program_version
 
-        # Create DFT section
-        if not hasattr(method.simulation, 'dft') or not method.simulation.dft:
-            method.simulation.dft = OldModelDFT()
-            self.logger.info('Created new DFT section')
-        else:
-            self.logger.info('Using existing DFT section')
-
-        # Extract and remove the XC functional mappings
-        xc_functional_type_map = calculation_params.pop('_xc_functional_type_map', {})
-        xc_functional_map = calculation_params.pop('_xc_functional_map', {})
-
-        # Extract XC functional information using the passed mappings
-        xc_functional_raw = calculation_params.get('xcfunctional', 'LDA')
-        # Get mapped values
-        xc_functional_type = xc_functional_type_map.get(xc_functional_raw, 'GGA')
-        xc_functional_names = xc_functional_map.get(xc_functional_raw, [])
-
-        # Set the values - set both jacobs_ladder AND xc_functional_type
-        method.simulation.dft.jacobs_ladder = xc_functional_type
-        method.simulation.dft.xc_functional_type = xc_functional_type
-        method.simulation.dft.xc_functional_names = xc_functional_names
-
     def _synchronize_metadata_from_eln(
         self, archive: EntryArchive, logger=None
     ) -> bool:
