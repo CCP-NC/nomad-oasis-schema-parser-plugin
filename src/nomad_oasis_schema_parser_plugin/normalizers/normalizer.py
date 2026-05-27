@@ -443,6 +443,85 @@ class CCPNCNormalizer(Normalizer):
             # Create chemical formula object using NOMAD's Formula utility
             formula_obj = Formula(ase_atoms.get_chemical_formula())
 
+            # Add Symmetry Analysis
+            symmetry_section = None
+            try:
+                # Import here to avoid circular imports
+                from matid import SymmetryAnalyzer
+                from nomad.datamodel.results import SymmetryNew
+                from nomad.normalizing.common import wyckoff_sets_from_matid
+                
+                # Run symmetry analysis using MatID
+                symm_analyzer = SymmetryAnalyzer(ase_atoms, 1e-2)  # 0.01 Å tolerance
+                
+                # Create symmetry section
+                symmetry_section = SymmetryNew()
+                symmetry_section.symmetry_method = 'MatID'
+                symmetry_section.space_group_number = symm_analyzer.get_space_group_number()
+                symmetry_section.space_group_symbol = symm_analyzer.get_space_group_international_short()
+                symmetry_section.hall_number = symm_analyzer.get_hall_number()
+                symmetry_section.hall_symbol = symm_analyzer.get_hall_symbol()
+                symmetry_section.point_group = symm_analyzer.get_point_group()
+                symmetry_section.crystal_system = symm_analyzer.get_crystal_system()
+                symmetry_section.bravais_lattice = symm_analyzer.get_bravais_lattice()
+                
+                # Add transformation information
+                try:
+                    symmetry_section.origin_shift = symm_analyzer._get_spglib_origin_shift()
+                    symmetry_section.transformation_matrix = symm_analyzer._get_spglib_transformation_matrix()
+                except Exception:
+                    pass  # These may not always be available
+                
+                # Add Wyckoff sets
+                try:
+                    wyckoff_sets = symm_analyzer.get_wyckoff_sets_conventional()
+                    if wyckoff_sets:
+                        symmetry_section.wyckoff_sets = wyckoff_sets_from_matid(wyckoff_sets)
+                except Exception:
+                    pass
+                
+                # Add prototype information
+                try:
+                    spg_number = symm_analyzer.get_space_group_number()
+                    conv_system = symm_analyzer.get_conventional_system()
+                    atom_species = conv_system.get_atomic_numbers()
+                    wyckoffs = symm_analyzer.get_wyckoff_letters_conventional()
+                    norm_wyckoff = atomutils.get_normalized_wyckoff(atom_species, wyckoffs)
+                    proto_dict = atomutils.search_aflow_prototype(spg_number, norm_wyckoff)
+                    
+                    if proto_dict:
+                        symmetry_section.prototype_label_aflow = proto_dict.get('aflow_prototype_id')
+                        # Import structure_name_map
+                        from nomad.datamodel.results import structure_name_map
+                        symmetry_section.prototype_name = structure_name_map.get(proto_dict.get('Notes'))
+                except Exception:
+                    pass
+                    
+                logger.info(f'Successfully created symmetry analysis: space group {symmetry_section.space_group_number}')
+                
+            except Exception as e:
+                logger.warning(f'Could not perform symmetry analysis: {e}')
+
+            dimensionality = None
+            try:
+                # Check if model_system has lattice_vectors and PBC
+                if (hasattr(archive.data, 'model_system') and 
+                    len(archive.data.model_system) > 0):
+                    model_sys = archive.data.model_system[0]
+                    pbc = getattr(model_sys, 'periodic_boundary_conditions', [False, False, False])
+                    lattice = getattr(model_sys, 'lattice_vectors', None)
+                    
+                    if lattice is not None and pbc:
+                        n_periodic = sum(pbc)
+                        dimensionality = f'{n_periodic}D'
+                    else:
+                        dimensionality = '3D'  # Default assumption for bulk systems
+                else:
+                    dimensionality = '3D'  # Default fallback
+            except Exception as e:
+                logger.warning(f"Could not determine dimensionality: {e}")
+                dimensionality = '3D'  # Safe default
+
             # Create the original/root system with composition data
             original_system = System(
                 method='parser',
