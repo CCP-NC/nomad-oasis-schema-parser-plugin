@@ -25,13 +25,13 @@ maintainers = [
 ]
 license = { file = "LICENSE" }
 dependencies = [
-    "nomad-lab == 1.4.2",
+    "nomad-lab >= 1.4.2",
     "python-magic-bin; sys_platform == 'win32'",
     "nomad-parser-plugins-electronic>=1.0",
     "nomad-schema-plugin-run>=1.0.1",
     "nomad-parser-plugins-atomistic>=1.0.6",
-    "nomad-parser-magres @ git+https://github.com/FAIRmat-NFDI/nomad-parser-magres.git@develop",
-    "nomad-nmr-schema @ git+https://github.com/FAIRmat-NFDI/nomad-schema-plugin-nmr.git@e12a0132c0b6966f4f574bba6e2fd11b48777285"
+    "nomad-parser-magres @ git+https://github.com/FAIRmat-NFDI/nomad-parser-magres.git@v1.0.0",
+    "nomad-nmr-schema @ git+https://github.com/FAIRmat-NFDI/nomad-schema-plugin-nmr.git@v0.1.4"
 ]
 
 [project.urls]
