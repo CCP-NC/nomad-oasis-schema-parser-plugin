@@ -57,31 +57,6 @@ class CCPNCNormalizer(Normalizer):
                     archive, archive._ccpnc_sec_run.system[0].atoms, logger=self.logger
                 )
 
-            # Populate the simulation.dft section if we have calculation params
-            if hasattr(archive, '_ccpnc_calculation_params'):
-                self._populate_simulation_dft(
-                    archive, archive._ccpnc_calculation_params
-                )
-
-        if (
-            archive.results
-            and archive.results.method
-            and archive.results.method.simulation
-            and archive.results.method.simulation.dft
-        ):
-            dft = archive.results.method.simulation.dft
-            self.logger.info(
-                {
-                    'event': 'CCPNCNormalizer FINAL DFT VALUES',
-                    'xc_functional_type': getattr(dft, 'xc_functional_type', 'MISSING'),
-                    'xc_functional_names': getattr(
-                        dft, 'xc_functional_names', 'MISSING'
-                    ),
-                    'jacobs_ladder': getattr(dft, 'jacobs_ladder', 'MISSING'),
-                    'normalizer': 'CCPNCNormalizer',
-                }
-            )
-
         # List of fields to check and populate from topology[0] if missing or empty
         fields = [
             'elements',
