@@ -548,8 +548,19 @@ class CCPNCNormalizer(Normalizer):
             )
             index = len(topology)
             original_system.system_id = f'results/material/topology/{index}'
+            if symmetry_section is not None:
+                original_system.symmetry = symmetry_section
             topology.append(original_system)
             archive.results.material.topology = topology
+
+            archive.results.material.dimensionality = dimensionality
+
+            # Set elemental composition from formula
+            if not archive.results.material.elemental_composition:
+                try:
+                    archive.results.material.elemental_composition = formula_obj.elemental_composition()
+                except Exception as e:
+                    logger.warning(f"Could not set elemental_composition: {e}")
 
         except Exception as e:
             self.logger.error('Failed to populate topology', exc_info=e, error=str(e))
