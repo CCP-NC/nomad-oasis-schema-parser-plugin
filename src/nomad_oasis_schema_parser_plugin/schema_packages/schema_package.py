@@ -11,6 +11,7 @@ from nomad.datamodel.data import ArchiveSection, EntryData
 from nomad.metainfo import JSON, Quantity, Reference, SchemaPackage, SubSection
 from nomad.metainfo.elasticsearch_extension import Elasticsearch
 from nomad_simulations.schema_packages.general import Simulation
+from nomad_simulations.schema_packages.model_method import DFT
 
 from nomad_oasis_schema_parser_plugin.schema_packages.eln_metadata import (
     CCPNCMetadataELN,
@@ -553,6 +554,7 @@ class ElementResolvedNMRSearch(ArchiveSection):
 # Define the CCPNCSimulation class holding CCP-NC specific metadata
 class CCPNCSimulation(Simulation):
     ccpnc_metadata = SubSection(section_def=CCPNCMetadata)
+    model_method = SubSection(sub_section=DFT.m_def, repeats=True)
 
     # New subsection for element-resolved magnetic shielding
     element_resolved_nmr_search = SubSection(section_def=ElementResolvedNMRSearch)
