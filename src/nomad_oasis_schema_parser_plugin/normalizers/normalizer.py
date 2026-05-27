@@ -85,6 +85,12 @@ class CCPNCNormalizer(Normalizer):
         # Populate element-resolved electric field gradient from normalized outputs
         self._populate_element_resolved_electric_field_gradient(archive, logger)
 
+        # Clear the 'unavailable' fallback set by DFT.normalize() when no XC functional
+        # is present in the magres file. Prefer unpopulated over a misleading default.
+        for mm in getattr(archive.data, 'model_method', None) or []:
+            if getattr(mm, 'jacobs_ladder', None) == 'unavailable':
+                mm.jacobs_ladder = None
+
         # Only try to sync from ELN if no metadata exists yet
         if not (
             hasattr(archive.data, 'ccpnc_metadata')
