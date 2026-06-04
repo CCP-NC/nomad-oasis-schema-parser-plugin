@@ -16,9 +16,6 @@ from nomad_simulations.schema_packages.model_method import DFT
 from nomad_oasis_schema_parser_plugin.schema_packages.eln_metadata import (
     CCPNCMetadataELN,
 )
-from nomad_oasis_schema_parser_plugin.schema_packages.metadata_voila import (
-    MetadataVoilaNotebook,
-)
 
 configuration = config.get_plugin_entry_point(
     'nomad_oasis_schema_parser_plugin.schema_packages:ccpnc_schema_entry_point'
@@ -154,13 +151,6 @@ class FreeTextMetadata(ArchiveSection):
         Additional notes specific to the polymorphic forms of the material.
         """,
     )
-
-
-class CCPNC_VoilaNotebook(MetadataVoilaNotebook, EntryData):
-    # m_def = Section(a_eln=dict(hide=['lab_id']))
-
-    def normalize(self, archive, logger):
-        super().normalize(archive, logger)
 
 
 class CCPNCMetadata(ArchiveSection):
