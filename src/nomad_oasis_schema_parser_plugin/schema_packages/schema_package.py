@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 
 import numpy as np
 from nomad.config import config
-from nomad.datamodel.data import ArchiveSection, EntryData
+from nomad.datamodel.data import ArchiveSection
 from nomad.metainfo import JSON, Quantity, Reference, SchemaPackage, SubSection
 from nomad.metainfo.elasticsearch_extension import Elasticsearch
 from nomad_simulations.schema_packages.general import Simulation
