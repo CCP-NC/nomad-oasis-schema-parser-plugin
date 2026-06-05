@@ -662,10 +662,10 @@ class CCPNCMagresParser(MagresParser):
 
         if not is_supported:
             logger.error(
-                'Only CASTEP and QE-GIPAW based NMR simulations are currently supported'
-                'by the CCPNC magres parser. Found calc_code: "%s"',
-                code,
+                f'Only CASTEP and QE-GIPAW based NMR simulations are currently supported '
+                f'by the CCPNC magres parser. Found calc_code: "{code}"'
             )
+            return
             return
 
         # Add XC functional mappings to calculation_params for the normalizer
