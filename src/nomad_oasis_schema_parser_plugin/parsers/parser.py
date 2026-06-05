@@ -517,7 +517,7 @@ class CCPNCMagresParser(MagresParser):
             atom_labels.append(atom[0])
             atom_positions.append(atom[3:])  # Ensure only x,y,z are taken
         sec_atoms.labels = atom_labels
-        sec_atoms.positions = atom_positions * ureg.angstrom
+        sec_atoms.positions = np.asarray(atom_positions, dtype=float) * ureg.angstrom
 
         # Add species (atomic numbers) based on labels
         try:
