@@ -11,6 +11,6 @@ class CCPNCNormalizerEntryPoint(NormalizerEntryPoint):
 
 
 ccpnc_normalizer_entry_point = CCPNCNormalizerEntryPoint(
-    name=' CCPNC Normalizer',
+    name='CCPNC Normalizer',
     description='CCPNC custom normalizer.',
 )
