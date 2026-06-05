@@ -662,7 +662,8 @@ class CCPNCMagresParser(MagresParser):
 
         if not is_supported:
             logger.error(
-                f'Only CASTEP and QE-GIPAW based NMR simulations are currently supported '
+                f'Only CASTEP and QE-GIPAW based NMR simulations are '
+                f'currently supported '
                 f'by the CCPNC magres parser. Found calc_code: "{code}"'
             )
             return
