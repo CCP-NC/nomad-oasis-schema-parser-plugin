@@ -53,7 +53,8 @@ def find_all_files(pattern: str, search_root: str) -> list:
     """Find all files matching `pattern` recursively from `search_root`.
 
     Unlike get_files, this collects every match and never raises on multiple results.
-    Intended for census queries such as counting how many .magres files exist in an upload.
+    Intended for census queries such as counting how many .magres files exist in an 
+    upload.
 
     Args:
         pattern: glob pattern, e.g. '*.magres'

@@ -611,8 +611,11 @@ class CCPNCMagresParser(MagresParser):
         # All metadata searches use this as their starting point so that metadata files
         # placed anywhere in the upload are found regardless of mainfile nesting depth.
         # This also keeps magres counting strictly within the current upload.
-        mainfile_relative = archive.metadata.mainfile or ''
-        depth = len(os.path.normpath(mainfile_relative).split(os.sep)) if mainfile_relative else 1
+        mainfile_relative = getattr(archive.metadata, 'mainfile', None) or ''
+        if mainfile_relative:
+            depth = len(os.path.normpath(mainfile_relative).split(os.sep))
+        else:
+            depth = 1
         upload_root = os.path.normpath(os.path.join(self.mainfile, *(['..'] * depth)))
 
         ccpnc_metadata = None
@@ -671,8 +674,8 @@ class CCPNCMagresParser(MagresParser):
                     f'magres files, please include a "metadata_info.csv" file with one '
                     f'row per magres file. Required columns: filename, chemname, '
                     f'license, doi, extref_type, extref_code, extref_other, chemform, '
-                    f'notes. Each "filename" value must exactly match the corresponding '
-                    f'magres filename (e.g. "ethanol.magres").'
+                    f'notes. Each "filename" value must exactly match the '
+                    f'corresponding magres filename (e.g. "ethanol.magres").'
                 )
             else:
                 metadata_reference = self.create_metadata_eln(
