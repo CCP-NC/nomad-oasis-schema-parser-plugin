@@ -48,6 +48,7 @@ from runschema.system import System as RunSchemaSystem
 # utility function used to get auxiliary files next to the `mainfile`
 from nomad_oasis_schema_parser_plugin.parsers.utils.utils import (
     create_archive,
+    find_all_files,
     get_files,
 )
 from nomad_oasis_schema_parser_plugin.schema_packages.eln_metadata import (
@@ -91,7 +92,11 @@ class CCPNCMagresParser(MagresParser):
         self.magres_outputs_class = NMROutputs
 
     def parse_csv_metadata(
-        self, filepath: str, target_filename: str, logger: 'BoundLogger'
+        self,
+        filepath: str,
+        target_filename: str,
+        logger: 'BoundLogger',
+        upload_root: str = None,
     ) -> dict | None:
         """Parse CSV file to extract metadata for a specific magres file.
 
@@ -99,17 +104,24 @@ class CCPNCMagresParser(MagresParser):
             filepath: Path to the magres file (used to locate CSV)
             target_filename: The filename to look for in CSV (e.g., 'ethanol.magres')
             logger: Logger instance
+            upload_root: Upload raw root directory; when provided the search starts here
+            so that a CSV placed anywhere in the upload (not just next to the mainfile)
+            is found correctly.
 
         Returns:
             Dictionary with metadata matching JSON structure, or None if not found
         """
         # Look for CSV file
-        csv_files = get_files(
-            pattern='metadata_info.csv',
-            filepath=filepath,
-            stripname=self.basename,
-            deep=True,
-        )
+        try:
+            csv_files = get_files(
+                pattern='metadata_info.csv',
+                filepath=filepath,
+                deep=True,
+                search_dir=upload_root,
+            )
+        except ValueError as e:
+            logger.error(str(e))
+            return None
 
         if not csv_files:
             logger.info('No CSV metadata file found')
@@ -225,12 +237,15 @@ class CCPNCMagresParser(MagresParser):
             Dictionary with metadata, or None if ELN not found
         """
         # Look for metadata.archive.json file in the same directory
-        eln_files = get_files(
-            pattern='metadata.archive.json',
-            filepath=filepath,
-            stripname=self.basename,
-            deep=False,  # Only check same directory as mainfile
-        )
+        try:
+            eln_files = get_files(
+                pattern='metadata.archive.json',
+                filepath=filepath,
+                deep=False,  # Only check same directory as mainfile
+            )
+        except ValueError as e:
+            logger.error(str(e))
+            return None
 
         if not eln_files:
             return None
@@ -282,10 +297,18 @@ class CCPNCMagresParser(MagresParser):
             return None
 
     def parse_json_file(
-        self, filepath: str, logger: 'BoundLogger'
+        self, filepath: str, logger: 'BoundLogger', upload_root: str = None
     ) -> CCPNCMetadata | None:
         """Parse the JSON file and extract relevant information with exact
-        filename matching."""
+        filename matching.
+
+        Args:
+            filepath: Path to the magres mainfile
+            logger: Logger instance
+            upload_root: Upload raw root directory; when provided the search starts here
+            so that a JSON placed anywhere in the upload (not just next to the mainfile)
+            is found correctly.
+        """
         # Extract the base filename without extension
         base_filename = os.path.splitext(self.basename)[0]
         expected_json_filename = f'{base_filename}.json'
@@ -296,9 +319,15 @@ class CCPNCMagresParser(MagresParser):
         )
 
         # First try exact filename matching
-        magres_json_file = get_files(
-            pattern=expected_json_filename, filepath=filepath, stripname=self.basename
-        )
+        try:
+            magres_json_file = get_files(
+                pattern=expected_json_filename,
+                filepath=filepath,
+                search_dir=upload_root,
+            )
+        except ValueError as e:
+            logger.error(str(e))
+            return None
 
         if not magres_json_file:
             logger.warning(
@@ -577,6 +606,15 @@ class CCPNCMagresParser(MagresParser):
     def _parse_and_attach_metadata(
         self, simulation, calculation_params, archive, logger
     ):
+        # Derive the upload raw root once, from archive.metadata.mainfile (the relative
+        # path within the upload) combined with the absolute mainfile path.
+        # All metadata searches use this as their starting point so that metadata files
+        # placed anywhere in the upload are found regardless of mainfile nesting depth.
+        # This also keeps magres counting strictly within the current upload.
+        mainfile_relative = archive.metadata.mainfile or ''
+        depth = len(os.path.normpath(mainfile_relative).split(os.sep)) if mainfile_relative else 1
+        upload_root = os.path.normpath(os.path.join(self.mainfile, *(['..'] * depth)))
+
         ccpnc_metadata = None
         metadata_source = None
 
@@ -595,7 +633,9 @@ class CCPNCMagresParser(MagresParser):
 
         # If no ELN, check for JSON file
         if not ccpnc_metadata:
-            json_metadata = self.parse_json_file(filepath=self.mainfile, logger=logger)
+            json_metadata = self.parse_json_file(
+                filepath=self.mainfile, logger=logger, upload_root=upload_root
+            )
             if json_metadata:
                 ccpnc_metadata = json_metadata
                 metadata_source = 'json'
@@ -603,7 +643,10 @@ class CCPNCMagresParser(MagresParser):
         # If no JSON, check for CSV file
         if not ccpnc_metadata:
             metadata_dict = self.parse_csv_metadata(
-                filepath=self.mainfile, target_filename=self.basename, logger=logger
+                filepath=self.mainfile,
+                target_filename=self.basename,
+                logger=logger,
+                upload_root=upload_root,
             )
             if metadata_dict:
                 ccpnc_metadata = self.populate_metadata_from_dict(
@@ -619,11 +662,24 @@ class CCPNCMagresParser(MagresParser):
 
         # Only create ELN if no metadata was found from any source
         if metadata_source is None:
-            metadata_reference = self.create_metadata_eln(
-                archive=archive, logger=logger
-            )
-            if metadata_reference:
-                simulation.metadata_eln_reference = metadata_reference
+            magres_files = find_all_files('*.magres', upload_root)
+            if len(magres_files) > 1:
+                logger.error(
+                    f'Found {len(magres_files)} magres files in this upload but no '
+                    f'recognised metadata file was found. No metadata ELN will be '
+                    f'created for this entry. To provide metadata for all uploaded '
+                    f'magres files, please include a "metadata_info.csv" file with one '
+                    f'row per magres file. Required columns: filename, chemname, '
+                    f'license, doi, extref_type, extref_code, extref_other, chemform, '
+                    f'notes. Each "filename" value must exactly match the corresponding '
+                    f'magres filename (e.g. "ethanol.magres").'
+                )
+            else:
+                metadata_reference = self.create_metadata_eln(
+                    archive=archive, logger=logger
+                )
+                if metadata_reference:
+                    simulation.metadata_eln_reference = metadata_reference
 
     def parse(
         self,
