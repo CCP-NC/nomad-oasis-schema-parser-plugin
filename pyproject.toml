@@ -14,7 +14,7 @@ classifiers = [
 ]
 name = "nomad-oasis-schema-parser-plugin"
 description = "Specialised magres parser + custom schema package for the CCP-NC NOMAD Oasis."
-version = "0.1.0"
+version = "1.0.0"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [
