@@ -124,3 +124,6 @@ ccpnc_normalizer_entry_point = "nomad_oasis_schema_parser_plugin.normalizers:ccp
 [tool.cruft]
 # Avoid updating workflow files, this leads to permissions issues
 skip = [".github/*"]
+
+[tool.setuptools_scm]
+fallback_version = "0.0.0"
