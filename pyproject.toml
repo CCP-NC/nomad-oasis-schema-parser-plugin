@@ -126,4 +126,4 @@ ccpnc_normalizer_entry_point = "nomad_oasis_schema_parser_plugin.normalizers:ccp
 skip = [".github/*"]
 
 [tool.setuptools_scm]
-fallback_version = "0.0.0"
+# Intentionally omit `fallback_version` so builds fail if SCM metadata isn't available.
