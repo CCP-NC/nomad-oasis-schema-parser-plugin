@@ -144,7 +144,10 @@ class ExternalDatabaseReference(ArchiveSection):
     external_database_name = Quantity(
         type=str,
         description="""
-        External database name where additional information on the material exists
+        External database where additional information on the material exists.
+        Permitted values, shown as checkboxes below: 'csd' (Cambridge
+        Structural Database), 'icsd' (Inorganic Crystal Structure Database),
+        'cod' (Crystallography Open Database), 'other', or 'n/a'.
         """,
     )
 
