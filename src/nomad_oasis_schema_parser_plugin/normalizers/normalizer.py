@@ -147,7 +147,7 @@ class CCPNCNormalizer(Normalizer):
         return entry
 
     def _group_and_set_isotropies(
-        self, element_isotropy_list, ms_section, IsotropyEntry
+        self, element_isotropy_list, ms_section, isotropy_entry_classes
     ):
         """
         Group isotropy values by element and set element-specific isotropy lists.
@@ -155,7 +155,8 @@ class CCPNCNormalizer(Normalizer):
         Args:
             element_isotropy_list: List of ElementIsotropyEntry objects
             ms_section: ElementResolvedMagneticShielding section to populate
-            IsotropyEntry: Class for creating isotropy entries
+            isotropy_entry_classes: Dict mapping element symbol to the
+                element-specific IsotropyEntry subclass to use for that list
         """
         element_groups = {}
         for entry in element_isotropy_list:
@@ -167,10 +168,11 @@ class CCPNCNormalizer(Normalizer):
         for element, isotropies in element_groups.items():
             attr_name = f'{element}_isotropy_list'
             if hasattr(ms_section, attr_name):
+                entry_class = isotropy_entry_classes[element]
                 setattr(
                     ms_section,
                     attr_name,
-                    [IsotropyEntry(isotropy=iso) for iso in isotropies],
+                    [entry_class(isotropy=iso) for iso in isotropies],
                 )
 
     def _populate_element_resolved_magnetic_shielding(
@@ -209,10 +211,10 @@ class CCPNCNormalizer(Normalizer):
 
         # Import schema classes
         from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
+            ISOTROPY_ENTRY_CLASSES,
             ElementIsotropyEntry,
             ElementResolvedMagneticShielding,
             ElementResolvedNMRSearch,
-            IsotropyEntry,
         )
 
         # Ensure all magnetic shielding objects are normalized
@@ -238,7 +240,9 @@ class CCPNCNormalizer(Normalizer):
 
         # Create element-resolved sections
         ms_section = ElementResolvedMagneticShielding()
-        self._group_and_set_isotropies(element_isotropy_list, ms_section, IsotropyEntry)
+        self._group_and_set_isotropies(
+            element_isotropy_list, ms_section, ISOTROPY_ENTRY_CLASSES
+        )
         ms_section.element_isotropy_list = element_isotropy_list
 
         # Get or create element_resolved_nmr_search section
@@ -305,14 +309,15 @@ class CCPNCNormalizer(Normalizer):
         entry.Vzz = vzz
         return entry
 
-    def _group_and_set_vzz(self, element_vzz_list, efg_section, VzzEntry):
+    def _group_and_set_vzz(self, element_vzz_list, efg_section, vzz_entry_classes):
         """
         Group Vzz values by element and set element-specific Vzz lists.
 
         Args:
             element_vzz_list: List of ElementVzzEntry objects
             efg_section: ElementResolvedElectricFieldGradient section to populate
-            VzzEntry: Class for creating Vzz entries
+            vzz_entry_classes: Dict mapping element symbol to the
+                element-specific VzzEntry subclass to use for that list
         """
         element_groups = {}
         for entry in element_vzz_list:
@@ -324,8 +329,11 @@ class CCPNCNormalizer(Normalizer):
         for element, vzz_values in element_groups.items():
             attr_name = f'{element}_vzz_list'
             if hasattr(efg_section, attr_name):
+                entry_class = vzz_entry_classes[element]
                 setattr(
-                    efg_section, attr_name, [VzzEntry(Vzz=vzz) for vzz in vzz_values]
+                    efg_section,
+                    attr_name,
+                    [entry_class(Vzz=vzz) for vzz in vzz_values],
                 )
 
     def _populate_element_resolved_electric_field_gradient(
@@ -366,10 +374,10 @@ class CCPNCNormalizer(Normalizer):
 
         # Import schema classes
         from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
+            VZZ_ENTRY_CLASSES,
             ElementResolvedElectricFieldGradient,
             ElementResolvedNMRSearch,
             ElementVzzEntry,
-            VzzEntry,
         )
 
         # Ensure all electric field gradient objects are normalized
@@ -393,7 +401,7 @@ class CCPNCNormalizer(Normalizer):
 
         # Create element-resolved sections
         efg_section = ElementResolvedElectricFieldGradient()
-        self._group_and_set_vzz(element_vzz_list, efg_section, VzzEntry)
+        self._group_and_set_vzz(element_vzz_list, efg_section, VZZ_ENTRY_CLASSES)
         efg_section.element_vzz_list = element_vzz_list
 
         # Get or create element_resolved_nmr_search section
