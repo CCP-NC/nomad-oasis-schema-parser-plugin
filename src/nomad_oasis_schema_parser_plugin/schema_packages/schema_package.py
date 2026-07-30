@@ -10,7 +10,7 @@ from nomad.config import config
 from nomad.datamodel.data import ArchiveSection
 from nomad.metainfo import JSON, Quantity, Reference, SchemaPackage, SubSection
 from nomad.metainfo.elasticsearch_extension import Elasticsearch
-from nomad_simulations.schema_packages.general import Simulation
+from nomad_simulations.schema_packages.general import Program, Simulation
 from nomad_simulations.schema_packages.model_method import DFT
 
 from nomad_oasis_schema_parser_plugin.schema_packages.eln_metadata import (
@@ -22,6 +22,30 @@ configuration = config.get_plugin_entry_point(
 )
 
 m_package = SchemaPackage()
+
+
+class CCPNCProgram(Program):
+    """Program section with descriptions tailored to the CCPNC/magres NMR
+    calculation context. The base `Program.name`/`version` descriptions from
+    nomad_simulations ('The name of the program.') are too generic to guide
+    users browsing this filter menu.
+    """
+
+    name = Quantity(
+        type=str,
+        description="""
+        Name of the DFT/simulation code used to run the NMR calculation that
+        produced this magres file, e.g. 'CASTEP' or 'QuantumESPRESSO'.
+        """,
+    )
+
+    version = Quantity(
+        type=str,
+        description="""
+        Version string of the simulation code, as reported in the magres
+        file's calculation metadata (e.g. '19.1').
+        """,
+    )
 
 
 class MaterialProperties(ArchiveSection):
@@ -545,6 +569,7 @@ class ElementResolvedNMRSearch(ArchiveSection):
 class CCPNCSimulation(Simulation):
     ccpnc_metadata = SubSection(section_def=CCPNCMetadata)
     model_method = SubSection(sub_section=DFT.m_def, repeats=True)
+    program = SubSection(sub_section=CCPNCProgram.m_def, repeats=False)
 
     # New subsection for element-resolved magnetic shielding
     element_resolved_nmr_search = SubSection(section_def=ElementResolvedNMRSearch)
