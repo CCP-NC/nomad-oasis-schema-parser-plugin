@@ -52,7 +52,9 @@ class MaterialProperties(ArchiveSection):
     chemical_name = Quantity(
         type=str,
         description="""
-        Free-text chemical name assigned by users.
+        Free-text chemical name assigned by users. Each distinct name
+        (including differences in case or formatting) appears as its own
+        checkbox option below — near-duplicate names are not merged.
         """,
     )
 
@@ -60,7 +62,7 @@ class MaterialProperties(ArchiveSection):
         type=str,
         shape=['*'],
         description="""
-        Free-text chemical name, but tokenised to take individual words in the name to 
+        Free-text chemical name, but tokenised to take individual words in the name to
         assist in wildcard searches.
         """,
     )
