@@ -738,7 +738,7 @@ class CCPNCMagresParser(MagresParser):
         program_name, program_version = self._parse_program_info(
             calculation_params, logger
         )
-        simulation.program = Program(
+        simulation.program = CCPNCProgram(
             name=program_name,
             version=program_version,
         )
