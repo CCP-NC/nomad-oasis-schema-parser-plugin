@@ -27,7 +27,9 @@ def test_parser_read_magres_json():
         archive.data.ccpnc_metadata.publication_record.doi
         == '10.1016/j.clay.2018.12.013'
     )
-    assert archive.data.ccpnc_metadata.ccpnc_record.license == 'pddl'
+    # Raw source data has 'pddl'; normalize_license() maps it to the
+    # canonical ELN dropdown label.
+    assert archive.data.ccpnc_metadata.ccpnc_record.license == 'PDDL v1.0'
     assert (
         archive.data.ccpnc_metadata.external_database_reference.external_database_reference_code
         == '1896953'
@@ -63,7 +65,9 @@ def test_parser_read_magres_csv():
     assert (
         archive.data.ccpnc_metadata.publication_record.doi == '10.1002/anie.201908914'
     )
-    assert archive.data.ccpnc_metadata.ccpnc_record.license == 'pddl'
+    # Raw source data has 'pddl'; normalize_license() maps it to the
+    # canonical ELN dropdown label.
+    assert archive.data.ccpnc_metadata.ccpnc_record.license == 'PDDL v1.0'
     assert (
         archive.data.ccpnc_metadata.external_database_reference.external_database_reference_code
         == 'BINMEQ05'
