@@ -126,7 +126,9 @@ class CCPNCRecord(ArchiveSection):
     immutable_id = Quantity(
         type=str,
         description="""
-        7 digit unique record identifier.
+        7-digit unique record identifier, zero-padded on the left. To search
+        for a specific record, enter all 7 digits, e.g. record 1 must be
+        entered as '0000001', not '1'. Search requires an exact match.
         """,
     )
 
