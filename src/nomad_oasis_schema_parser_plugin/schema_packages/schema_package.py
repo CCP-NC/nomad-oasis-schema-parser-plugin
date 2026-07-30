@@ -514,121 +514,199 @@ class ElementResolvedElectricFieldGradient(ArchiveSection):
         description='List of element/vzz entries.',
     )
     Al_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Al'], repeats=True, description='List of EFG Vzz values for Al'
+        section_def=VZZ_ENTRY_CLASSES['Al'],
+        repeats=True,
+        description='List of EFG Vzz values for Al',
     )
     B_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['B'], repeats=True, description='List of EFG Vzz values for B'
+        section_def=VZZ_ENTRY_CLASSES['B'],
+        repeats=True,
+        description='List of EFG Vzz values for B',
     )
     Ba_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Ba'], repeats=True, description='List of EFG Vzz values for Ba'
+        section_def=VZZ_ENTRY_CLASSES['Ba'],
+        repeats=True,
+        description='List of EFG Vzz values for Ba',
     )
     Bi_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Bi'], repeats=True, description='List of EFG Vzz values for Bi'
+        section_def=VZZ_ENTRY_CLASSES['Bi'],
+        repeats=True,
+        description='List of EFG Vzz values for Bi',
     )
     Br_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Br'], repeats=True, description='List of EFG Vzz values for Br'
+        section_def=VZZ_ENTRY_CLASSES['Br'],
+        repeats=True,
+        description='List of EFG Vzz values for Br',
     )
     C_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['C'], repeats=True, description='List of EFG Vzz values for C'
+        section_def=VZZ_ENTRY_CLASSES['C'],
+        repeats=True,
+        description='List of EFG Vzz values for C',
     )
     Cd_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Cd'], repeats=True, description='List of EFG Vzz values for Cd'
+        section_def=VZZ_ENTRY_CLASSES['Cd'],
+        repeats=True,
+        description='List of EFG Vzz values for Cd',
     )
     Cl_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Cl'], repeats=True, description='List of EFG Vzz values for Cl'
+        section_def=VZZ_ENTRY_CLASSES['Cl'],
+        repeats=True,
+        description='List of EFG Vzz values for Cl',
     )
     Cr_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Cr'], repeats=True, description='List of EFG Vzz values for Cr'
+        section_def=VZZ_ENTRY_CLASSES['Cr'],
+        repeats=True,
+        description='List of EFG Vzz values for Cr',
     )
     Cs_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Cs'], repeats=True, description='List of EFG Vzz values for Cs'
+        section_def=VZZ_ENTRY_CLASSES['Cs'],
+        repeats=True,
+        description='List of EFG Vzz values for Cs',
     )
     Cu_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Cu'], repeats=True, description='List of EFG Vzz values for Cu'
+        section_def=VZZ_ENTRY_CLASSES['Cu'],
+        repeats=True,
+        description='List of EFG Vzz values for Cu',
     )
     F_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['F'], repeats=True, description='List of EFG Vzz values for F'
+        section_def=VZZ_ENTRY_CLASSES['F'],
+        repeats=True,
+        description='List of EFG Vzz values for F',
     )
     Fe_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Fe'], repeats=True, description='List of EFG Vzz values for Fe'
+        section_def=VZZ_ENTRY_CLASSES['Fe'],
+        repeats=True,
+        description='List of EFG Vzz values for Fe',
     )
     Ga_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Ga'], repeats=True, description='List of EFG Vzz values for Ga'
+        section_def=VZZ_ENTRY_CLASSES['Ga'],
+        repeats=True,
+        description='List of EFG Vzz values for Ga',
     )
     H_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['H'], repeats=True, description='List of EFG Vzz values for H'
+        section_def=VZZ_ENTRY_CLASSES['H'],
+        repeats=True,
+        description='List of EFG Vzz values for H',
     )
     Hf_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Hf'], repeats=True, description='List of EFG Vzz values for Hf'
+        section_def=VZZ_ENTRY_CLASSES['Hf'],
+        repeats=True,
+        description='List of EFG Vzz values for Hf',
     )
     I_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['I'], repeats=True, description='List of EFG Vzz values for I'
+        section_def=VZZ_ENTRY_CLASSES['I'],
+        repeats=True,
+        description='List of EFG Vzz values for I',
     )
     In_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['In'], repeats=True, description='List of EFG Vzz values for In'
+        section_def=VZZ_ENTRY_CLASSES['In'],
+        repeats=True,
+        description='List of EFG Vzz values for In',
     )
     La_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['La'], repeats=True, description='List of EFG Vzz values for La'
+        section_def=VZZ_ENTRY_CLASSES['La'],
+        repeats=True,
+        description='List of EFG Vzz values for La',
     )
     Li_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Li'], repeats=True, description='List of EFG Vzz values for Li'
+        section_def=VZZ_ENTRY_CLASSES['Li'],
+        repeats=True,
+        description='List of EFG Vzz values for Li',
     )
     Mg_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Mg'], repeats=True, description='List of EFG Vzz values for Mg'
+        section_def=VZZ_ENTRY_CLASSES['Mg'],
+        repeats=True,
+        description='List of EFG Vzz values for Mg',
     )
     N_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['N'], repeats=True, description='List of EFG Vzz values for N'
+        section_def=VZZ_ENTRY_CLASSES['N'],
+        repeats=True,
+        description='List of EFG Vzz values for N',
     )
     Na_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Na'], repeats=True, description='List of EFG Vzz values for Na'
+        section_def=VZZ_ENTRY_CLASSES['Na'],
+        repeats=True,
+        description='List of EFG Vzz values for Na',
     )
     O_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['O'], repeats=True, description='List of EFG Vzz values for O'
+        section_def=VZZ_ENTRY_CLASSES['O'],
+        repeats=True,
+        description='List of EFG Vzz values for O',
     )
     P_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['P'], repeats=True, description='List of EFG Vzz values for P'
+        section_def=VZZ_ENTRY_CLASSES['P'],
+        repeats=True,
+        description='List of EFG Vzz values for P',
     )
     S_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['S'], repeats=True, description='List of EFG Vzz values for S'
+        section_def=VZZ_ENTRY_CLASSES['S'],
+        repeats=True,
+        description='List of EFG Vzz values for S',
     )
     Sb_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Sb'], repeats=True, description='List of EFG Vzz values for Sb'
+        section_def=VZZ_ENTRY_CLASSES['Sb'],
+        repeats=True,
+        description='List of EFG Vzz values for Sb',
     )
     Sc_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Sc'], repeats=True, description='List of EFG Vzz values for Sc'
+        section_def=VZZ_ENTRY_CLASSES['Sc'],
+        repeats=True,
+        description='List of EFG Vzz values for Sc',
     )
     Se_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Se'], repeats=True, description='List of EFG Vzz values for Se'
+        section_def=VZZ_ENTRY_CLASSES['Se'],
+        repeats=True,
+        description='List of EFG Vzz values for Se',
     )
     Si_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Si'], repeats=True, description='List of EFG Vzz values for Si'
+        section_def=VZZ_ENTRY_CLASSES['Si'],
+        repeats=True,
+        description='List of EFG Vzz values for Si',
     )
     Sn_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Sn'], repeats=True, description='List of EFG Vzz values for Sn'
+        section_def=VZZ_ENTRY_CLASSES['Sn'],
+        repeats=True,
+        description='List of EFG Vzz values for Sn',
     )
     Sr_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Sr'], repeats=True, description='List of EFG Vzz values for Sr'
+        section_def=VZZ_ENTRY_CLASSES['Sr'],
+        repeats=True,
+        description='List of EFG Vzz values for Sr',
     )
     Ta_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Ta'], repeats=True, description='List of EFG Vzz values for Ta'
+        section_def=VZZ_ENTRY_CLASSES['Ta'],
+        repeats=True,
+        description='List of EFG Vzz values for Ta',
     )
     Te_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Te'], repeats=True, description='List of EFG Vzz values for Te'
+        section_def=VZZ_ENTRY_CLASSES['Te'],
+        repeats=True,
+        description='List of EFG Vzz values for Te',
     )
     Ti_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Ti'], repeats=True, description='List of EFG Vzz values for Ti'
+        section_def=VZZ_ENTRY_CLASSES['Ti'],
+        repeats=True,
+        description='List of EFG Vzz values for Ti',
     )
     V_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['V'], repeats=True, description='List of EFG Vzz values for V'
+        section_def=VZZ_ENTRY_CLASSES['V'],
+        repeats=True,
+        description='List of EFG Vzz values for V',
     )
     Y_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Y'], repeats=True, description='List of EFG Vzz values for Y'
+        section_def=VZZ_ENTRY_CLASSES['Y'],
+        repeats=True,
+        description='List of EFG Vzz values for Y',
     )
     Zn_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Zn'], repeats=True, description='List of EFG Vzz values for Zn'
+        section_def=VZZ_ENTRY_CLASSES['Zn'],
+        repeats=True,
+        description='List of EFG Vzz values for Zn',
     )
     Zr_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Zr'], repeats=True, description='List of EFG Vzz values for Zr'
+        section_def=VZZ_ENTRY_CLASSES['Zr'],
+        repeats=True,
+        description='List of EFG Vzz values for Zr',
     )
 
 
