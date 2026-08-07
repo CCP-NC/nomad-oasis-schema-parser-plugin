@@ -169,10 +169,20 @@ class CCPNCMetadata(ArchiveSection):
     free_text_metadata = SubSection(section_def=FreeTextMetadata)
     publication_record = SubSection(section_def=PublicationRecord)
 
+_SITE_LABEL_DESCRIPTION = (
+    'Atomic site label as it appears in the source magres file, e.g. \'H_1\'.'
+)
+
+# `m_def.more.label_quantity` (used by the GUI archive browser to label list
+# items) and `key_quantity` (the backend equivalent, set on the SubSections
+# below) both need to point at `site_label` for site labels to display correctly
 
 # New section for element-resolved magnetic shielding isotropy values
 class ElementIsotropyEntry(ArchiveSection):
+    m_def = Section(label_quantity='site_label')
+
     element = Quantity(type=str, description="Element symbol, e.g. 'H', 'C', 'O'.")
+    site_label = Quantity(type=str, description=_SITE_LABEL_DESCRIPTION)
     isotropy = Quantity(
         type=float, 
         unit='ppm',
@@ -183,7 +193,10 @@ class ElementIsotropyEntry(ArchiveSection):
 
 # New section for element-resolved electric field gradient Vzz values
 class ElementVzzEntry(ArchiveSection):
+    m_def = Section(label_quantity='site_label')
+
     element = Quantity(type=str, description="Element symbol, e.g. 'H', 'C', 'O'.")
+    site_label = Quantity(type=str, description=_SITE_LABEL_DESCRIPTION)
     Vzz = Quantity(
         type=float, 
         unit='a_u_efg',
@@ -192,6 +205,9 @@ class ElementVzzEntry(ArchiveSection):
 
 
 class IsotropyEntry(ArchiveSection):
+    m_def = Section(label_quantity='site_label')
+
+    site_label = Quantity(type=str, description=_SITE_LABEL_DESCRIPTION)
     isotropy = Quantity(
         type=float, 
         unit='ppm',
@@ -201,6 +217,9 @@ class IsotropyEntry(ArchiveSection):
 
 
 class VzzEntry(ArchiveSection):
+    m_def = Section(label_quantity='site_label')
+
+    site_label = Quantity(type=str, description=_SITE_LABEL_DESCRIPTION)
     Vzz = Quantity(
         type=float,
         unit='a_u_efg',
@@ -235,6 +254,9 @@ def _make_isotropy_entry_class(symbol: str) -> type:
         (IsotropyEntry,),
         {
             '__module__': __name__,
+            # A subclass's auto-generated `m_def` does not inherit the
+            # parent's `label_quantity`, so it must be set again here.
+            'm_def': Section(label_quantity='site_label'),
             'isotropy': Quantity(
                 type=float,
                 unit='ppm',
@@ -257,6 +279,9 @@ def _make_vzz_entry_class(symbol: str) -> type:
         (VzzEntry,),
         {
             '__module__': __name__,
+            # A subclass's auto-generated `m_def` does not inherit the
+            # parent's `label_quantity`, so it must be set again here.
+            'm_def': Section(label_quantity='site_label'),
             'Vzz': Quantity(
                 type=float,
                 unit='a_u_efg',
