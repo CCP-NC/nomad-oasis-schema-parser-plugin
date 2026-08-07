@@ -5,16 +5,23 @@ import os
 import numpy as np
 
 from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
+    ISOTROPY_ENTRY_CLASSES,
     ORCID,
+    VZZ_ENTRY_CLASSES,
     CCPNCMetadata,
     CCPNCRecord,
+    ElementResolvedElectricFieldGradient,
+    ElementResolvedMagneticShielding,
     ExternalDatabaseReference,
+    IsotropyEntry,
     MaterialProperties,
     PublicationRecord,
+    VzzEntry,
 )
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
 EXPECTED_STOICHIOMETRY_COUNT = 21
+EXPECTED_NMR_ELEMENT_COUNT = 39
 
 
 def test_material_properties_fields():
@@ -117,3 +124,40 @@ def test_ccpnc_metadata_from_csv():
                 found.add(fname)
     for fname in expected:
         assert fname in found, f'Metadata for {fname} not found in CSV.'
+
+
+def test_element_classes_cover_all_elements():
+    """The per-element magnetic shielding / EFG classes are generated
+    dynamically from a shared element list; check the two dicts stay in
+    sync and cover elements spread across the list (not just the count)."""
+    assert len(ISOTROPY_ENTRY_CLASSES) == EXPECTED_NMR_ELEMENT_COUNT
+    assert set(ISOTROPY_ENTRY_CLASSES) == set(VZZ_ENTRY_CLASSES)
+
+    for symbol in ('H', 'C', 'O', 'Al', 'Zr'):
+        assert symbol in ISOTROPY_ENTRY_CLASSES
+        assert symbol in VZZ_ENTRY_CLASSES
+        assert issubclass(ISOTROPY_ENTRY_CLASSES[symbol], IsotropyEntry)
+        assert issubclass(VZZ_ENTRY_CLASSES[symbol], VzzEntry)
+
+
+def test_site_label_used_as_key():
+    """Both the GUI (label_quantity) and backend (key_quantity) labelling
+    mechanisms must point at `site_label`, or per-site entries fall back to
+    being labelled by their plain list index in the archive browser."""
+    for classes, base_class in (
+        (ISOTROPY_ENTRY_CLASSES, IsotropyEntry),
+        (VZZ_ENTRY_CLASSES, VzzEntry),
+    ):
+        for symbol in ('H', 'C'):
+            entry_cls = classes[symbol]
+            assert entry_cls.m_def.more.get('label_quantity') == 'site_label'
+            assert 'site_label' in entry_cls.m_def.all_quantities
+        assert base_class.m_def.more.get('label_quantity') == 'site_label'
+
+    ms_subsections = ElementResolvedMagneticShielding.m_def.all_sub_sections
+    assert ms_subsections['H_isotropy_list'].key_quantity == 'site_label'
+    assert ms_subsections['element_isotropy_list'].key_quantity == 'site_label'
+
+    efg_subsections = ElementResolvedElectricFieldGradient.m_def.all_sub_sections
+    assert efg_subsections['H_vzz_list'].key_quantity == 'site_label'
+    assert efg_subsections['element_vzz_list'].key_quantity == 'site_label'
