@@ -143,6 +143,7 @@ class CCPNCNormalizer(Normalizer):
 
         entry = ElementIsotropyEntry()
         entry.element = chemical_symbol
+        entry.site_label = getattr(atom, 'label', None)
         entry.isotropy = isotropy
         return entry
 
@@ -163,7 +164,7 @@ class CCPNCNormalizer(Normalizer):
             element = entry.element
             if element not in element_groups:
                 element_groups[element] = []
-            element_groups[element].append(entry.isotropy)
+            element_groups[element].append((entry.isotropy, entry.site_label))
 
         for element, isotropies in element_groups.items():
             attr_name = f'{element}_isotropy_list'
@@ -172,7 +173,10 @@ class CCPNCNormalizer(Normalizer):
                 setattr(
                     ms_section,
                     attr_name,
-                    [entry_class(isotropy=iso) for iso in isotropies],
+                    [
+                        entry_class(isotropy=iso, site_label=label)
+                        for iso, label in isotropies
+                    ],
                 )
 
     def _populate_element_resolved_magnetic_shielding(
@@ -306,6 +310,7 @@ class CCPNCNormalizer(Normalizer):
 
         entry = ElementVzzEntry()
         entry.element = chemical_symbol
+        entry.site_label = getattr(atom, 'label', None)
         entry.Vzz = vzz
         return entry
 
@@ -324,7 +329,7 @@ class CCPNCNormalizer(Normalizer):
             element = entry.element
             if element not in element_groups:
                 element_groups[element] = []
-            element_groups[element].append(entry.Vzz)
+            element_groups[element].append((entry.Vzz, entry.site_label))
 
         for element, vzz_values in element_groups.items():
             attr_name = f'{element}_vzz_list'
@@ -333,7 +338,10 @@ class CCPNCNormalizer(Normalizer):
                 setattr(
                     efg_section,
                     attr_name,
-                    [entry_class(Vzz=vzz) for vzz in vzz_values],
+                    [
+                        entry_class(Vzz=vzz, site_label=label)
+                        for vzz, label in vzz_values
+                    ],
                 )
 
     def _populate_element_resolved_electric_field_gradient(
