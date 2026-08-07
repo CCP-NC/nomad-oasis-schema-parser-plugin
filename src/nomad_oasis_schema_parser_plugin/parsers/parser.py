@@ -39,6 +39,7 @@ from nomad_parser_magres.parsers.parser import MagresParser
 
 # from nomad_parser_magres.parsers.parser import MagresParser
 from nomad_simulations.schema_packages.atoms_state import AtomsState
+from nomad_simulations.schema_packages.general import Program
 from runschema.run import Program as RunSchemaProgram
 from runschema.run import Run as OldRun
 from runschema.system import Atoms as RunSchemaAtoms
@@ -58,7 +59,6 @@ from nomad_oasis_schema_parser_plugin.schema_packages.metadata_sync_utilities im
 )
 from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
     CCPNCMetadata,
-    CCPNCProgram,
 )
 from nomad_oasis_schema_parser_plugin.schema_packages.schema_package import (
     CCPNCSimulation as Simulation,
@@ -738,7 +738,7 @@ class CCPNCMagresParser(MagresParser):
         program_name, program_version = self._parse_program_info(
             calculation_params, logger
         )
-        simulation.program = CCPNCProgram(
+        simulation.program = Program(
             name=program_name,
             version=program_version,
         )
