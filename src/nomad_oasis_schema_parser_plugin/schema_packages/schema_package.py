@@ -1,5 +1,6 @@
 from typing import (
     TYPE_CHECKING,
+    NamedTuple,
 )
 
 if TYPE_CHECKING:
@@ -9,7 +10,7 @@ import numpy as np
 from ase.data import atomic_names, chemical_symbols
 from nomad.config import config
 from nomad.datamodel.data import ArchiveSection
-from nomad.metainfo import JSON, Quantity, Reference, SchemaPackage, SubSection
+from nomad.metainfo import JSON, Quantity, Reference, SchemaPackage, Section, SubSection
 from nomad.metainfo.elasticsearch_extension import Elasticsearch
 from nomad_simulations.schema_packages.general import Simulation
 from nomad_simulations.schema_packages.model_method import DFT
@@ -305,410 +306,71 @@ VZZ_ENTRY_CLASSES = {
 }
 
 
-class ElementResolvedMagneticShielding(ArchiveSection):
-    element_isotropy_list = SubSection(
-        section_def=ElementIsotropyEntry,
-        repeats=True,
-        description='List of element/isotropy entries.',
-    )
-    Al_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Al'],
-        repeats=True,
-        description='List of shielding isotropy values for Al',
-    )
-    B_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['B'],
-        repeats=True,
-        description='List of shielding isotropy values for B',
-    )
-    Ba_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Ba'],
-        repeats=True,
-        description='List of shielding isotropy values for Ba',
-    )
-    Bi_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Bi'],
-        repeats=True,
-        description='List of shielding isotropy values for Bi',
-    )
-    Br_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Br'],
-        repeats=True,
-        description='List of shielding isotropy values for Br',
-    )
-    C_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['C'],
-        repeats=True,
-        description='List of shielding isotropy values for C',
-    )
-    Cd_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Cd'],
-        repeats=True,
-        description='List of shielding isotropy values for Cd',
-    )
-    Cl_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Cl'],
-        repeats=True,
-        description='List of shielding isotropy values for Cl',
-    )
-    Cr_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Cr'],
-        repeats=True,
-        description='List of shielding isotropy values for Cr',
-    )
-    Cs_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Cs'],
-        repeats=True,
-        description='List of shielding isotropy values for Cs',
-    )
-    Cu_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Cu'],
-        repeats=True,
-        description='List of shielding isotropy values for Cu',
-    )
-    F_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['F'],
-        repeats=True,
-        description='List of shielding isotropy values for F',
-    )
-    Fe_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Fe'],
-        repeats=True,
-        description='List of shielding isotropy values for Fe',
-    )
-    Ga_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Ga'],
-        repeats=True,
-        description='List of shielding isotropy values for Ga',
-    )
-    H_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['H'],
-        repeats=True,
-        description='List of shielding isotropy values for H',
-    )
-    Hf_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Hf'],
-        repeats=True,
-        description='List of shielding isotropy values for Hf',
-    )
-    I_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['I'],
-        repeats=True,
-        description='List of shielding isotropy values for I',
-    )
-    In_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['In'],
-        repeats=True,
-        description='List of shielding isotropy values for In',
-    )
-    La_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['La'],
-        repeats=True,
-        description='List of shielding isotropy values for La',
-    )
-    Li_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Li'],
-        repeats=True,
-        description='List of shielding isotropy values for Li',
-    )
-    Mg_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Mg'],
-        repeats=True,
-        description='List of shielding isotropy values for Mg',
-    )
-    N_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['N'],
-        repeats=True,
-        description='List of shielding isotropy values for N',
-    )
-    Na_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Na'],
-        repeats=True,
-        description='List of shielding isotropy values for Na',
-    )
-    O_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['O'],
-        repeats=True,
-        description='List of shielding isotropy values for O',
-    )
-    P_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['P'],
-        repeats=True,
-        description='List of shielding isotropy values for P',
-    )
-    S_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['S'],
-        repeats=True,
-        description='List of shielding isotropy values for S',
-    )
-    Sb_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Sb'],
-        repeats=True,
-        description='List of shielding isotropy values for Sb',
-    )
-    Sc_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Sc'],
-        repeats=True,
-        description='List of shielding isotropy values for Sc',
-    )
-    Se_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Se'],
-        repeats=True,
-        description='List of shielding isotropy values for Se',
-    )
-    Si_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Si'],
-        repeats=True,
-        description='List of shielding isotropy values for Si',
-    )
-    Sn_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Sn'],
-        repeats=True,
-        description='List of shielding isotropy values for Sn',
-    )
-    Sr_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Sr'],
-        repeats=True,
-        description='List of shielding isotropy values for Sr',
-    )
-    Ta_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Ta'],
-        repeats=True,
-        description='List of shielding isotropy values for Ta',
-    )
-    Te_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Te'],
-        repeats=True,
-        description='List of shielding isotropy values for Te',
-    )
-    Ti_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Ti'],
-        repeats=True,
-        description='List of shielding isotropy values for Ti',
-    )
-    V_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['V'],
-        repeats=True,
-        description='List of shielding isotropy values for V',
-    )
-    Y_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Y'],
-        repeats=True,
-        description='List of shielding isotropy values for Y',
-    )
-    Zn_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Zn'],
-        repeats=True,
-        description='List of shielding isotropy values for Zn',
-    )
-    Zr_isotropy_list = SubSection(
-        section_def=ISOTROPY_ENTRY_CLASSES['Zr'],
-        repeats=True,
-        description='List of shielding isotropy values for Zr',
-    )
+class _GenericEntry(NamedTuple):
+    """The combined (all-elements) list shown alongside the per-element ones."""
+
+    attr_name: str
+    section_def: type
+    description: str
 
 
-class ElementResolvedElectricFieldGradient(ArchiveSection):
-    element_vzz_list = SubSection(
-        section_def=ElementVzzEntry,
-        repeats=True,
-        description='List of element/vzz entries.',
-    )
-    Al_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Al'],
-        repeats=True,
-        description='List of EFG Vzz values for Al',
-    )
-    B_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['B'],
-        repeats=True,
-        description='List of EFG Vzz values for B',
-    )
-    Ba_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Ba'],
-        repeats=True,
-        description='List of EFG Vzz values for Ba',
-    )
-    Bi_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Bi'],
-        repeats=True,
-        description='List of EFG Vzz values for Bi',
-    )
-    Br_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Br'],
-        repeats=True,
-        description='List of EFG Vzz values for Br',
-    )
-    C_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['C'],
-        repeats=True,
-        description='List of EFG Vzz values for C',
-    )
-    Cd_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Cd'],
-        repeats=True,
-        description='List of EFG Vzz values for Cd',
-    )
-    Cl_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Cl'],
-        repeats=True,
-        description='List of EFG Vzz values for Cl',
-    )
-    Cr_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Cr'],
-        repeats=True,
-        description='List of EFG Vzz values for Cr',
-    )
-    Cs_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Cs'],
-        repeats=True,
-        description='List of EFG Vzz values for Cs',
-    )
-    Cu_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Cu'],
-        repeats=True,
-        description='List of EFG Vzz values for Cu',
-    )
-    F_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['F'],
-        repeats=True,
-        description='List of EFG Vzz values for F',
-    )
-    Fe_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Fe'],
-        repeats=True,
-        description='List of EFG Vzz values for Fe',
-    )
-    Ga_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Ga'],
-        repeats=True,
-        description='List of EFG Vzz values for Ga',
-    )
-    H_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['H'],
-        repeats=True,
-        description='List of EFG Vzz values for H',
-    )
-    Hf_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Hf'],
-        repeats=True,
-        description='List of EFG Vzz values for Hf',
-    )
-    I_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['I'],
-        repeats=True,
-        description='List of EFG Vzz values for I',
-    )
-    In_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['In'],
-        repeats=True,
-        description='List of EFG Vzz values for In',
-    )
-    La_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['La'],
-        repeats=True,
-        description='List of EFG Vzz values for La',
-    )
-    Li_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Li'],
-        repeats=True,
-        description='List of EFG Vzz values for Li',
-    )
-    Mg_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Mg'],
-        repeats=True,
-        description='List of EFG Vzz values for Mg',
-    )
-    N_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['N'],
-        repeats=True,
-        description='List of EFG Vzz values for N',
-    )
-    Na_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Na'],
-        repeats=True,
-        description='List of EFG Vzz values for Na',
-    )
-    O_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['O'],
-        repeats=True,
-        description='List of EFG Vzz values for O',
-    )
-    P_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['P'],
-        repeats=True,
-        description='List of EFG Vzz values for P',
-    )
-    S_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['S'],
-        repeats=True,
-        description='List of EFG Vzz values for S',
-    )
-    Sb_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Sb'],
-        repeats=True,
-        description='List of EFG Vzz values for Sb',
-    )
-    Sc_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Sc'],
-        repeats=True,
-        description='List of EFG Vzz values for Sc',
-    )
-    Se_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Se'],
-        repeats=True,
-        description='List of EFG Vzz values for Se',
-    )
-    Si_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Si'],
-        repeats=True,
-        description='List of EFG Vzz values for Si',
-    )
-    Sn_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Sn'],
-        repeats=True,
-        description='List of EFG Vzz values for Sn',
-    )
-    Sr_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Sr'],
-        repeats=True,
-        description='List of EFG Vzz values for Sr',
-    )
-    Ta_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Ta'],
-        repeats=True,
-        description='List of EFG Vzz values for Ta',
-    )
-    Te_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Te'],
-        repeats=True,
-        description='List of EFG Vzz values for Te',
-    )
-    Ti_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Ti'],
-        repeats=True,
-        description='List of EFG Vzz values for Ti',
-    )
-    V_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['V'],
-        repeats=True,
-        description='List of EFG Vzz values for V',
-    )
-    Y_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Y'],
-        repeats=True,
-        description='List of EFG Vzz values for Y',
-    )
-    Zn_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Zn'],
-        repeats=True,
-        description='List of EFG Vzz values for Zn',
-    )
-    Zr_vzz_list = SubSection(
-        section_def=VZZ_ENTRY_CLASSES['Zr'],
-        repeats=True,
-        description='List of EFG Vzz values for Zr',
-    )
+class _PerElementEntries(NamedTuple):
+    """Per-element list config. `description_template` takes `{symbol}`."""
+
+    attr_suffix: str
+    classes: dict
+    description_template: str
+
+
+def _make_element_resolved_class(
+    class_name: str, generic: _GenericEntry, per_element: _PerElementEntries
+) -> type:
+    """Build an element-resolved container class (magnetic shielding or EFG)
+    with one SubSection per element in `per_element.classes`, instead of
+    hand-writing one attribute per element.
+    """
+    namespace = {
+        '__module__': __name__,
+        generic.attr_name: SubSection(
+            section_def=generic.section_def,
+            repeats=True,
+            description=generic.description,
+            key_quantity='site_label',
+        ),
+    }
+    for symbol, entry_class in per_element.classes.items():
+        namespace[f'{symbol}{per_element.attr_suffix}'] = SubSection(
+            section_def=entry_class,
+            repeats=True,
+            description=per_element.description_template.format(symbol=symbol),
+            key_quantity='site_label',
+        )
+    return type(class_name, (ArchiveSection,), namespace)
+
+
+ElementResolvedMagneticShielding = _make_element_resolved_class(
+    'ElementResolvedMagneticShielding',
+    _GenericEntry(
+        'element_isotropy_list',
+        ElementIsotropyEntry,
+        'List of element/isotropy entries.',
+    ),
+    _PerElementEntries(
+        '_isotropy_list',
+        ISOTROPY_ENTRY_CLASSES,
+        'List of shielding isotropy values for {symbol}',
+    ),
+)
+
+ElementResolvedElectricFieldGradient = _make_element_resolved_class(
+    'ElementResolvedElectricFieldGradient',
+    _GenericEntry(
+        'element_vzz_list', ElementVzzEntry, 'List of element/vzz entries.'
+    ),
+    _PerElementEntries(
+        '_vzz_list', VZZ_ENTRY_CLASSES, 'List of EFG Vzz values for {symbol}'
+    ),
+)
 
 
 class ElementResolvedNMRSearch(ArchiveSection):
