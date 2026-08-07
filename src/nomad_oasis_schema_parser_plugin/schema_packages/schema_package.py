@@ -185,7 +185,7 @@ class ElementIsotropyEntry(ArchiveSection):
     element = Quantity(type=str, description="Element symbol, e.g. 'H', 'C', 'O'.")
     site_label = Quantity(type=str, description=_SITE_LABEL_DESCRIPTION)
     isotropy = Quantity(
-        type=float, 
+        type=float,
         unit='ppm',
         a_eln=dict(defaultDisplayUnit='ppm'),
         description='Shielding isotropy value for an atomic site.'
@@ -199,7 +199,7 @@ class ElementVzzEntry(ArchiveSection):
     element = Quantity(type=str, description="Element symbol, e.g. 'H', 'C', 'O'.")
     site_label = Quantity(type=str, description=_SITE_LABEL_DESCRIPTION)
     Vzz = Quantity(
-        type=float, 
+        type=float,
         unit='a_u_efg',
         description='Electric field gradient Vzz value for an atomic site.'
     )
@@ -210,7 +210,7 @@ class IsotropyEntry(ArchiveSection):
 
     site_label = Quantity(type=str, description=_SITE_LABEL_DESCRIPTION)
     isotropy = Quantity(
-        type=float, 
+        type=float,
         unit='ppm',
         a_eln=dict(defaultDisplayUnit='ppm'),
         description='Shielding isotropy value for any element'
