@@ -1,8 +1,12 @@
 import os
 
+# Import first to register the plugin normalizer entry points, avoiding
+# a circular import when CCPNCNormalizer is imported directly below.
+import nomad.normalizing  # noqa: F401
 import structlog
 from nomad.datamodel import EntryArchive
 
+from nomad_oasis_schema_parser_plugin.normalizers.normalizer import CCPNCNormalizer
 from nomad_oasis_schema_parser_plugin.parsers.parser import CCPNCMagresParser
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), '..', 'data')
@@ -27,7 +31,9 @@ def test_parser_read_magres_json():
         archive.data.ccpnc_metadata.publication_record.doi
         == '10.1016/j.clay.2018.12.013'
     )
-    assert archive.data.ccpnc_metadata.ccpnc_record.license == 'pddl'
+    # Raw source data has 'pddl'; normalize_license() maps it to the
+    # canonical ELN dropdown label.
+    assert archive.data.ccpnc_metadata.ccpnc_record.license == 'PDDL v1.0'
     assert (
         archive.data.ccpnc_metadata.external_database_reference.external_database_reference_code
         == '1896953'
@@ -63,7 +69,9 @@ def test_parser_read_magres_csv():
     assert (
         archive.data.ccpnc_metadata.publication_record.doi == '10.1002/anie.201908914'
     )
-    assert archive.data.ccpnc_metadata.ccpnc_record.license == 'pddl'
+    # Raw source data has 'pddl'; normalize_license() maps it to the
+    # canonical ELN dropdown label.
+    assert archive.data.ccpnc_metadata.ccpnc_record.license == 'PDDL v1.0'
     assert (
         archive.data.ccpnc_metadata.external_database_reference.external_database_reference_code
         == 'BINMEQ05'
@@ -89,3 +97,37 @@ def test_parser_handles_qe_generated_magres_with_missing_metadata():
     assert program.name == 'Quantum ESPRESSO'
     # For this test file, version should be extracted from calc_code ("QE-GIPAW 5.x")
     assert program.version == '5.x'
+
+
+def test_normalizer_sets_site_labels():
+    """
+    Site labels (e.g. 'H_1') are copied from the matched atom's `label` onto
+    the element-resolved isotropy/Vzz entries during normalization. Check
+    they survive both the combined list and the per-element grouping.
+    """
+    parser = CCPNCMagresParser()
+    archive = EntryArchive()
+    logger = get_logger()
+
+    magres_path = os.path.join(DATA_DIR, 'multi_upload_file1.magres')
+    parser.parse(magres_path, archive, logger)
+
+    normalizer = CCPNCNormalizer()
+    normalizer._populate_element_resolved_magnetic_shielding(archive, logger)
+    normalizer._populate_element_resolved_electric_field_gradient(archive, logger)
+
+    element_resolved = archive.data.element_resolved_nmr_search
+
+    magnetic_shielding = element_resolved.element_resolved_magnetic_shielding
+    combined_labels = [
+        entry.site_label for entry in magnetic_shielding.element_isotropy_list[:3]
+    ]
+    per_element_labels = [
+        entry.site_label for entry in magnetic_shielding.H_isotropy_list[:3]
+    ]
+    assert combined_labels == ['H_1', 'H_2', 'H_3']
+    assert per_element_labels == ['H_1', 'H_2', 'H_3']
+
+    electric_field_gradient = element_resolved.element_resolved_electric_field_gradient
+    efg_labels = [entry.site_label for entry in electric_field_gradient.H_vzz_list[:3]]
+    assert efg_labels == ['H_1', 'H_2', 'H_3']

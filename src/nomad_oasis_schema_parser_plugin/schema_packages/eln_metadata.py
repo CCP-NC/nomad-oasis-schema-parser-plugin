@@ -23,6 +23,7 @@ class CCPNCMetadataELN(EntryData):
 
     m_def = Section(
         label='CCPNC Metadata Entry',
+        a_eln=dict(overview=True),
     )
 
     # Reference to the main Magres entry

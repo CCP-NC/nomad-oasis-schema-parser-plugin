@@ -18,6 +18,46 @@ def get_value_or_none(data, key, default=None):
         return None
     return value
 
+# Maps legacy/raw license identifiers (as found in older JSON/CSV metadata
+# files) to the same canonical, human-readable labels offered in the ELN
+# license dropdown (see CCPNCMetadataELN.license in eln_metadata.py). Without
+# this, e.g. 'pddl' and 'PDDL v1.0' end up as two distinct values in the
+# search filter menu even though they mean the same license.
+LICENSE_ALIASES = {
+    'pddl': 'PDDL v1.0',
+    'pddl v1.0': 'PDDL v1.0',
+    'cc-by': 'CC BY 4.0',
+    'cc by': 'CC BY 4.0',
+    'ccby': 'CC BY 4.0',
+    'cc-by-4.0': 'CC BY 4.0',
+    'cc by 4.0': 'CC BY 4.0',
+    'odc-by': 'ODC BY v1.0',
+    'odc by': 'ODC BY v1.0',
+    'odc-by v1.0': 'ODC BY v1.0',
+    'odc by v1.0': 'ODC BY v1.0',
+}
+
+
+def normalize_license(value, logger=None):
+    """Map a raw/legacy license string to the canonical ELN label.
+
+    Matching is case-insensitive. Values that don't match a known alias are
+    returned unchanged (and logged) rather than dropped, so unrecognised
+    variants stay visible in the filter menu instead of silently vanishing.
+    """
+    if not value:
+        return value
+    normalized = LICENSE_ALIASES.get(value.strip().lower())
+    if normalized is None:
+        if logger:
+            logger.warning(
+                f"Unrecognised license value '{value}' — leaving as-is. "
+                'Add it to LICENSE_ALIASES if it should map to a canonical '
+                'label.'
+            )
+        return value
+    return normalized
+
 
 def tokenize_name(name):
     """Tokenize chemical name with position-aware wildcards for search.
@@ -97,7 +137,9 @@ def create_ccpnc_metadata_from_dict(metadata_dict, calculation_params, logger):
 
     # Parse version metadata
     version_metadata = metadata_dict.get('version_metadata', {})
-    ccpnc_record.license = get_value_or_none(version_metadata, 'license')
+    ccpnc_record.license = normalize_license(
+        get_value_or_none(version_metadata, 'license'), logger
+    )
     external_database_reference.external_database_name = get_value_or_none(
         version_metadata, 'extref_type'
     )
