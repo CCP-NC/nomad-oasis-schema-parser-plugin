@@ -31,7 +31,7 @@ dependencies = [
     "nomad-schema-plugin-run>=1.0.1",
     "nomad-parser-plugins-atomistic>=1.0.6",
     "nomad-parser-magres @ git+https://github.com/FAIRmat-NFDI/nomad-parser-magres.git@v1.1.1",
-    "nomad-nmr-schema @ git+https://github.com/FAIRmat-NFDI/nomad-schema-plugin-nmr.git@v0.1.5"
+    "nomad-nmr-schema @ git+https://github.com/FAIRmat-NFDI/nomad-schema-plugin-nmr.git@v0.1.6"
 ]
 
 [project.urls]
